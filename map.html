@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Map</title>
+    </head>
+    <body>
+        <h1>lkjlk</h1>
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.4/socket.io.js"> </script>
+        <script>
+        var socket = io.connect('http://localhost:5000');
+        socket.emit("join",0)
+        const data={
+            lat:31,
+            lng:32.0212,
+           maxDistance:10000
+        }
+        socket.emit("AdminGetDrivers",data)
+    socket.on('AdminGetDrivers', function (data) {
+        console.log(data);
+    });    </script>
+    </body>
+</html>
