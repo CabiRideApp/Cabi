@@ -87,8 +87,8 @@ io.on("connection", (socket) => {
               pickupLat: pickupLat,
               pickupLng: pickupLng,
               pickAddress: data.pickAddress,
-              dropoffLat: pickupLat,
-              dropoffLng: pickupLng,
+              dropoffLat: dropoffLat,
+              dropoffLng: dropoffLng,
               dropoffAddress: data.pickAddress,
               promoCode: data.promoCode,
               categoryCarTypeID: data.categoryCarTypeID,
@@ -103,6 +103,8 @@ io.on("connection", (socket) => {
               dropoffLat: pickupLat,
               dropoffLng: pickupLng,
               dropoffAddress: data.pickAddress,
+              userId: userID,
+              tripID: Trip_ID,
             };
 
             if (drivers.length > 0) {
@@ -144,7 +146,7 @@ io.on("connection", (socket) => {
                       trip.tripDrivers = dr;
                       DriverM.update(
                         {driverID: drivers[0].driverID},
-                        {$set: {isBusy: true}}
+                        {$set: {isBusy: true, busyTrip: from_to}}
                       ).then(() => {
                         const savedTrip = trip.save();
                       });
@@ -201,7 +203,7 @@ io.on("connection", (socket) => {
                             trip.tripDrivers = dr;
                             DriverM.update(
                               {driverID: drivers[1].driverID},
-                              {$set: {isBusy: true}}
+                              {$set: {isBusy: true, busyTrip: from_to}}
                             ).then(() => {
                               const savedTrip = trip.save();
                             });
@@ -261,7 +263,7 @@ io.on("connection", (socket) => {
                               trip.tripDrivers = dr;
                               DriverM.update(
                                 {driverID: drivers[1].driverID},
-                                {$set: {isBusy: true}}
+                                {$set: {isBusy: true, busyTrip: from_to}}
                               ).then(() => {
                                 const savedTrip = trip.save();
                               });
@@ -455,7 +457,7 @@ io.on("connection", (socket) => {
         });
         const data1 = {
           drivers: driversList,
-          time: time[0].duration.text,
+          time: time[0].duration.value / 60,
         };
         //console.log(data1);
 
@@ -607,7 +609,7 @@ io.on("connection", (socket) => {
           $near: {
             $geometry: {type: "Point", coordinates: [data.lat, data.lng]},
           },
-          $maxDistance: data.maxDistance,
+          //$maxDistance: data.maxDistance,
         },
       }).then(async (res) => {
         var list = [];
@@ -616,9 +618,9 @@ io.on("connection", (socket) => {
             status:
               driver.isOnline === true && driver.isBusy == false
                 ? 1
-                : driver.isOnline == true && driver.isBusy == false
+                : driver.isOnline == true && driver.isBusy == true
                 ? 2
-                : driver.isOnline == false && driver.isBusy == false
+                : driver.isOnline == false
                 ? 3
                 : 0,
             driverID: driver.driverID,
@@ -635,6 +637,7 @@ io.on("connection", (socket) => {
             carImage: driver.carImage,
             driverImage: driver.driverImage,
             updateLocationDate: driver.updateLocationDate,
+            trip: driver.isBusy ? driver.busyTrip : "",
           };
           list.push(temp);
         });

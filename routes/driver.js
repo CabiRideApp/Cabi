@@ -73,6 +73,7 @@ router.post("/is_Busy", async (req, res) => {
         {
           $set: {
             isBusy: false,
+            busyTrip: {},
           },
         }
       );
@@ -88,5 +89,4 @@ router.post("/is_Busy", async (req, res) => {
     });
   }
 });
-
 module.exports = router;

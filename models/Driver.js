@@ -1,19 +1,44 @@
 const mongoose = require("mongoose");
-const GeoJSON = require('mongoose-geojson-schema');
-const { Number, Boolean, String, Buffer } = mongoose.Schema.Types;
+const GeoJSON = require("mongoose-geojson-schema");
+const {Number, Boolean, String, Buffer} = mongoose.Schema.Types;
 
 const pointSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['Point'],
-    required: true
+    enum: ["Point"],
+    required: true,
   },
   coordinates: {
     type: [Number],
-    required: true
-  }
+    required: true,
+  },
 });
-
+const tripSchema = new mongoose.Schema({
+  pickupLat: {
+    type: Number,
+  },
+  pickupLng: {
+    type: Number,
+  },
+  pickAddress: {
+    type: String,
+  },
+  dropoffLat: {
+    type: Number,
+  },
+  dropoffLng: {
+    type: Number,
+  },
+  dropoffAddress: {
+    type: String,
+  },
+  userId: {
+    type: Number,
+  },
+  tripID: {
+    type: Number,
+  },
+});
 const driverSchema = new mongoose.Schema({
   driverID: {
     type: Number,
@@ -35,8 +60,8 @@ const driverSchema = new mongoose.Schema({
   },
   location: {
     type: pointSchema,
-    index: '2dsphere',
-    required: true
+    index: "2dsphere",
+    required: true,
   },
   phoneNumber: {
     type: Number,
@@ -45,28 +70,28 @@ const driverSchema = new mongoose.Schema({
     type: Number,
   },
   driverNameAr: {
-    type: String
+    type: String,
   },
   driverNameEn: {
-    type: String
+    type: String,
   },
   modelNameAr: {
-    type: String
+    type: String,
   },
   modelNameEn: {
-    type: String
+    type: String,
   },
   colorNameAr: {
-    type: String
+    type: String,
   },
   colorNameEn: {
-    type: String
+    type: String,
   },
   carImage: {
-    type: String
+    type: String,
   },
   driverImage: {
-    type: String
+    type: String,
   },
   plateNumber: {
     type: Number,
@@ -75,8 +100,11 @@ const driverSchema = new mongoose.Schema({
     type: Date,
   },
   tokenID: {
-    type: String
-  }
+    type: String,
+  },
+  busyTrip: {
+    type: tripSchema,
+  },
 });
 
 const Driver = mongoose.model("Driver", driverSchema);
