@@ -426,7 +426,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("getavailable", (data) => {
-    console.log(data);
+    // console.log(data);
     try {
       DriverM.find({
         isBusy: false,
@@ -439,7 +439,7 @@ io.on("connection", (socket) => {
           },
         },
       }).then(async (res) => {
-        console.log(res);
+        //console.log(res);
         var near = res[0];
         // console.log(near);
 
@@ -457,10 +457,10 @@ io.on("connection", (socket) => {
           drivers: driversList,
           time: time[0].duration.text,
         };
-        console.log(data1);
+        //console.log(data1);
 
         let user_id = users.get(data.userid);
-        io.to(user_id).emit("getavailable", res);
+        io.to(user_id).emit("getavailable", data1);
       });
     } catch (err) {
       console.log(err);
