@@ -18,8 +18,12 @@
            maxDistance:10000
         }
         socket.emit("AdminGetDrivers",data)
-    socket.on('AdminGetDrivers', function (data) {
+         socket.on('AdminGetDrivers', function (data) {
+                console.log(data);
+            }); 
+      socket.on('trackAdmin', function (data) {
         console.log(data);
-    });    </script>
+    });    
+    </script>
     </body>
 </html>
