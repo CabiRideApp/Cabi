@@ -22,6 +22,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 var users = new Map();
+var admins = new Map();
 
 mongoose.connect(
   process.env.DB_CONNECTION,
@@ -83,7 +84,9 @@ app.post("/driver/is_Online", async (req, res) => {
           updateLocationDate: driver.updateLocationDate,
           trip: driver.isBusy ? driver.busyTrip : "",
         };
-        io.to(users.get(0)).emit("trackAdmin", data);
+        admins.forEach((admin) => {
+          io.to(admin).emit("trackAdmin", data);
+        });
       });
     }
     if (req.query.status == 2) {
@@ -124,7 +127,9 @@ app.post("/driver/is_Online", async (req, res) => {
           trip: driver.isBusy ? driver.busyTrip : "",
         };
         console.log(data);
-        io.to(users.get(0)).emit("trackAdmin", data);
+        admins.forEach((admin) => {
+          io.to(admin).emit("trackAdmin", data);
+        });
       });
     }
     res.json({
@@ -182,7 +187,9 @@ app.post("/driver/is_Busy", async (req, res) => {
           updateLocationDate: driver.updateLocationDate,
           trip: driver.isBusy ? driver.busyTrip : "",
         };
-        io.to(users.get(0)).emit("trackAdmin", data);
+        admins.forEach((admin) => {
+          io.to(admin).emit("trackAdmin", data);
+        });
       });
     }
     if (req.query.status == 2) {
@@ -222,7 +229,9 @@ app.post("/driver/is_Busy", async (req, res) => {
           updateLocationDate: driver.updateLocationDate,
           trip: driver.isBusy ? driver.busyTrip : "",
         };
-        io.to(users.get(0)).emit("trackAdmin", data);
+        admins.forEach((admin) => {
+          io.to(admin).emit("trackAdmin", data);
+        });
       });
     }
     res.json({
@@ -284,7 +293,9 @@ app.post("/driver/updateLocation", async (req, res) => {
             trip: driver.isBusy ? driver.busyTrip : "",
           };
           // console.log(data);
-          io.to(users.get(0)).emit("trackAdmin", data);
+          admins.forEach((admin) => {
+            io.to(admin).emit("trackAdmin", data);
+          });
           res.json({
             sucess: 1,
             message: "update location success",
@@ -741,7 +752,9 @@ io.on("connection", (socket) => {
               trip: driver.isBusy ? driver.busyTrip : "",
             };
             console.log(data);
-            io.to(users.get(0)).emit("trackAdmin", data);
+            admins.forEach((admin) => {
+              io.to(admin).emit("trackAdmin", data);
+            });
           })
         )
         .catch((err) => console.log(err));
@@ -975,8 +988,11 @@ io.on("connection", (socket) => {
           list.push(temp);
         });
         // console.log(list);
-        let user_id = users.get(0);
-        io.to(user_id).emit("AdminGetDrivers", list);
+
+        admins.forEach((admin) => {
+          // console.log(admin);
+          io.to(admin).emit("AdminGetDrivers", list);
+        });
       });
     } catch (err) {
       console.log(err);
@@ -988,9 +1004,19 @@ io.on("connection", (socket) => {
     console.log(users);
   });
 
+  socket.on("joinAdmin", (id) => {
+    admins.set(id, socket.id);
+    console.log(admins);
+  });
+
   socket.on("disconnect", (number) => {
     users.delete(number);
     console.log("user disconnected");
+  });
+
+  socket.on("disconnectAdmin", (number) => {
+    admins.delete(number);
+    console.log("admin disconnected");
   });
 });
 const Port = process.env.Port || 5000;

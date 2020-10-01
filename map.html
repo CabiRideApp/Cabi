@@ -11,7 +11,7 @@
             src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.4/socket.io.js"> </script>
         <script>
         var socket = io.connect('http://localhost:5000');
-        socket.emit("join",0)
+        socket.emit("joinAdmin",0)
         const data={
             lat:31,
             lng:32.0212,
@@ -21,9 +21,9 @@
          socket.on('AdminGetDrivers', function (data) {
                 console.log(data);
             }); 
-      socket.on('trackAdmin', function (data) {
+     /* socket.on('trackAdmin', function (data) {
         console.log(data);
-    });    
+    });  */  
     </script>
     </body>
 </html>
