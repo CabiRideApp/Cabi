@@ -237,6 +237,70 @@ app.post("/driver/is_Busy", async (req, res) => {
   }
 });
 
+app.post("/driver/updateLocation", async (req, res) => {
+  console.log(req.query);
+  try {
+    DriverM.findOne({
+      driverID: req.query.driverID,
+    })
+      .then((driver) =>
+        DriverM.updateOne(
+          {
+            driverID: req.query.driverID,
+          },
+          {
+            $set: {
+              location: {
+                coordinates: [req.query.lat, req.query.lng],
+                type: "Point",
+              },
+              UpdateLocationDate: new Date(),
+            },
+          }
+        ).then(() => {
+          const data = {
+            status:
+              driver.isOnline === true && driver.isBusy == false
+                ? 1
+                : driver.isOnline == true && driver.isBusy == true
+                ? 2
+                : driver.isOnline == false
+                ? 3
+                : 0,
+            driverID: driver.driverID,
+            location: driver.location,
+            categoryCarTypeID: driver.categoryCarTypeID,
+            phoneNumber: driver.phoneNumber,
+            idNo: driver.idNo,
+            driverNameAr: driver.driverNameAr,
+            driverNameEn: driver.driverNameEn,
+            modelNameAr: driver.modelNameAr,
+            modelNameEn: driver.modelNameEn,
+            colorNameAr: driver.colorNameAr,
+            colorNameEn: driver.colorNameEn,
+            carImage: driver.carImage,
+            driverImage: driver.driverImage,
+            updateLocationDate: driver.updateLocationDate,
+            trip: driver.isBusy ? driver.busyTrip : "",
+          };
+          // console.log(data);
+          io.to(users.get(0)).emit("trackAdmin", data);
+          res.json({
+            sucess: 1,
+            message: "update location success",
+          });
+        })
+      )
+      .catch((err) => console.log(err));
+  } catch (error) {
+    console.log("error");
+    res.json({
+      sucess: 0,
+      message: "update busy status faild",
+    });
+  }
+});
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: "https://cabi-app.firebaseio.com",
