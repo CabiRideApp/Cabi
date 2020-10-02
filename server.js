@@ -253,7 +253,7 @@ app.post("/driver/is_Busy", async (req, res) => {
 app.post("/driver/updateLocation", async (req, res) => {
   console.log(req.query);
   var newLat = req.query.lat;
-  var newLong = req.query.long;
+  var newLong = req.query.lng;
   try {
     DriverM.findOne({
       driverID: req.query.driverID,
@@ -313,6 +313,7 @@ app.post("/driver/updateLocation", async (req, res) => {
           admins.forEach((admin) => {
             io.to(admin).emit("trackAdmin", data);
           });
+          console.log(data);
           res.json({
             sucess: 1,
             message: "update location success",
