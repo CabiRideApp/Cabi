@@ -252,8 +252,8 @@ app.post("/driver/is_Busy", async (req, res) => {
 
 app.post("/driver/updateLocation", async (req, res) => {
   console.log(req.query);
-  var newLat = data.query.lat;
-  var newLong = data.query.long;
+  var newLat = req.query.lat;
+  var newLong = req.query.long;
   try {
     DriverM.findOne({
       driverID: req.query.driverID,
@@ -309,7 +309,7 @@ app.post("/driver/updateLocation", async (req, res) => {
             updateLocationDate: driver.updateLocationDate,
             trip: driver.isBusy ? driver.busyTrip : "",
           };
-          // console.log(data);
+          console.log(data);
           admins.forEach((admin) => {
             io.to(admin).emit("trackAdmin", data);
           });
@@ -435,8 +435,36 @@ io.on("connection", (socket) => {
                       },
                       notification_options
                     )
-                    .then((response) => {
-                      res.status(200).send("Notification sent successfully");
+                    .then(() => {
+                      const data = {
+                        status:
+                          dr[0].isOnline === true && dr[0].isBusy == false
+                            ? 1
+                            : dr[0].isOnline == true && dr[0].isBusy == true
+                            ? 2
+                            : dr[0].isOnline == false
+                            ? 3
+                            : 0,
+                        driverID: dr[0].driverID,
+                        location: dr[0].location,
+                        categoryCarTypeID: dr[0].categoryCarTypeID,
+                        phoneNumber: dr[0].phoneNumber,
+                        idNo: dr[0].idNo,
+                        driverNameAr: dr[0].driverNameAr,
+                        driverNameEn: dr[0].driverNameEn,
+                        modelNameAr: dr[0].modelNameAr,
+                        modelNameEn: dr[0].modelNameEn,
+                        colorNameAr: dr[0].colorNameAr,
+                        colorNameEn: dr[0].colorNameEn,
+                        carImage: dr[0].carImage,
+                        driverImage: dr[0].driverImage,
+                        updateLocationDate: dr[0].updateLocationDate,
+                        trip: dr[0].isBusy ? dr[0].busyTrip : "",
+                      };
+                      console.log(data);
+                      admins.forEach((admin) => {
+                        io.to(admin).emit("trackAdmin", data);
+                      });
                     })
                     .catch((error) => {
                       console.log(error);
@@ -498,10 +526,37 @@ io.on("connection", (socket) => {
                             },
                             notification_options
                           )
-                          .then((response) => {
-                            res
-                              .status(200)
-                              .send("Notification sent successfully");
+                          .then(() => {
+                            const data = {
+                              status:
+                                dr[1].isOnline === true && dr[1].isBusy == false
+                                  ? 1
+                                  : dr[1].isOnline == true &&
+                                    dr[1].isBusy == true
+                                  ? 2
+                                  : dr[1].isOnline == false
+                                  ? 3
+                                  : 0,
+                              driverID: dr[1].driverID,
+                              location: dr[1].location,
+                              categoryCarTypeID: dr[1].categoryCarTypeID,
+                              phoneNumber: dr[1].phoneNumber,
+                              idNo: dr[1].idNo,
+                              driverNameAr: dr[1].driverNameAr,
+                              driverNameEn: dr[1].driverNameEn,
+                              modelNameAr: dr[1].modelNameAr,
+                              modelNameEn: dr[1].modelNameEn,
+                              colorNameAr: dr[1].colorNameAr,
+                              colorNameEn: dr[1].colorNameEn,
+                              carImage: dr[1].carImage,
+                              driverImage: dr[1].driverImage,
+                              updateLocationDate: dr[1].updateLocationDate,
+                              trip: dr[1].isBusy ? dr[1].busyTrip : "",
+                            };
+                            console.log(data);
+                            admins.forEach((admin) => {
+                              io.to(admin).emit("trackAdmin", data);
+                            });
                           })
                           .catch((error) => {
                             console.log(error);
@@ -565,10 +620,38 @@ io.on("connection", (socket) => {
                               },
                               notification_options
                             )
-                            .then((response) => {
-                              res
-                                .status(200)
-                                .send("Notification sent successfully");
+                            .then(() => {
+                              const data = {
+                                status:
+                                  dr[2].isOnline === true &&
+                                  dr[2].isBusy == false
+                                    ? 1
+                                    : dr[2].isOnline == true &&
+                                      dr[2].isBusy == true
+                                    ? 2
+                                    : dr[2].isOnline == false
+                                    ? 3
+                                    : 0,
+                                driverID: dr[2].driverID,
+                                location: dr[2].location,
+                                categoryCarTypeID: dr[2].categoryCarTypeID,
+                                phoneNumber: dr[2].phoneNumber,
+                                idNo: dr[2].idNo,
+                                driverNameAr: dr[2].driverNameAr,
+                                driverNameEn: dr[2].driverNameEn,
+                                modelNameAr: dr[2].modelNameAr,
+                                modelNameEn: dr[2].modelNameEn,
+                                colorNameAr: dr[2].colorNameAr,
+                                colorNameEn: dr[2].colorNameEn,
+                                carImage: dr[2].carImage,
+                                driverImage: dr[2].driverImage,
+                                updateLocationDate: dr[2].updateLocationDate,
+                                trip: dr[2].isBusy ? dr[2].busyTrip : "",
+                              };
+                              console.log(data);
+                              admins.forEach((admin) => {
+                                io.to(admin).emit("trackAdmin", data);
+                              });
                             })
                             .catch((error) => {
                               console.log(error);
