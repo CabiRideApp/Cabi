@@ -59,13 +59,14 @@ app.post("/driver/is_Online", async (req, res) => {
         }
       ).then(() => {
         console.log(driver);
+        const ISONLINE = true;
         const data = {
           status:
-            driver.isOnline === true && driver.isBusy == false
+            ISONLINE === true && driver.isBusy == false
               ? 1
-              : driver.isOnline == true && driver.isBusy == true
+              : ISONLINE == true && driver.isBusy == true
               ? 2
-              : driver.isOnline == false
+              : ISONLINE == false
               ? 3
               : 0,
           driverID: driver.driverID,
@@ -101,13 +102,14 @@ app.post("/driver/is_Online", async (req, res) => {
           },
         }
       ).then(() => {
+        const ISONLINE = false;
         const data = {
           status:
-            driver.isOnline === true && driver.isBusy == false
+            ISONLINE === true && driver.isBusy == false
               ? 1
-              : driver.isOnline == true && driver.isBusy == true
+              : ISONLINE == true && driver.isBusy == true
               ? 2
-              : driver.isOnline == false
+              : ISONLINE == false
               ? 3
               : 0,
           driverID: driver.driverID,
@@ -162,11 +164,12 @@ app.post("/driver/is_Busy", async (req, res) => {
           },
         }
       ).then(() => {
+        const ISBUSY = true;
         const data = {
           status:
-            driver.isOnline === true && driver.isBusy == false
+            driver.isOnline === true && ISBUSY == false
               ? 1
-              : driver.isOnline == true && driver.isBusy == true
+              : driver.isOnline == true && ISBUSY == true
               ? 2
               : driver.isOnline == false
               ? 3
@@ -204,11 +207,12 @@ app.post("/driver/is_Busy", async (req, res) => {
           },
         }
       ).then(() => {
+        const ISBUSY = false;
         const data = {
           status:
-            driver.isOnline === true && driver.isBusy == false
+            driver.isOnline === true && ISBUSY == false
               ? 1
-              : driver.isOnline == true && driver.isBusy == true
+              : driver.isOnline == true && ISBUSY == true
               ? 2
               : driver.isOnline == false
               ? 3
@@ -248,6 +252,8 @@ app.post("/driver/is_Busy", async (req, res) => {
 
 app.post("/driver/updateLocation", async (req, res) => {
   console.log(req.query);
+  var newLat = data.query.lat;
+  var newLong = data.query.long;
   try {
     DriverM.findOne({
       driverID: req.query.driverID,
@@ -259,10 +265,6 @@ app.post("/driver/updateLocation", async (req, res) => {
           },
           {
             $set: {
-              location: {
-                coordinates: [req.query.lat, req.query.lng],
-                type: "Point",
-              },
               oldLocation: {
                 coordinates: [
                   driver.location.coordinates[0],
@@ -270,10 +272,18 @@ app.post("/driver/updateLocation", async (req, res) => {
                 ],
                 type: "Point",
               },
+              location: {
+                coordinates: [newLat, newLong],
+                type: "Point",
+              },
               UpdateLocationDate: new Date(),
             },
           }
         ).then(() => {
+          const location = {
+            coordinates: [newLat, newLong],
+            type: "Point",
+          };
           const data = {
             status:
               driver.isOnline === true && driver.isBusy == false
@@ -284,7 +294,7 @@ app.post("/driver/updateLocation", async (req, res) => {
                 ? 3
                 : 0,
             driverID: driver.driverID,
-            location: driver.location,
+            location: location,
             categoryCarTypeID: driver.categoryCarTypeID,
             phoneNumber: driver.phoneNumber,
             idNo: driver.idNo,
@@ -714,6 +724,8 @@ io.on("connection", (socket) => {
 
   socket.on("updatelocation", (data) => {
     console.log(data);
+    var newLat = data.lat;
+    var newLong = data.long;
     try {
       DriverM.findOne({
         driverID: data.driverID,
@@ -725,10 +737,6 @@ io.on("connection", (socket) => {
             },
             {
               $set: {
-                location: {
-                  coordinates: [data.lat, data.long],
-                  type: "Point",
-                },
                 oldLocation: {
                   coordinates: [
                     driver.location.coordinates[0],
@@ -736,10 +744,19 @@ io.on("connection", (socket) => {
                   ],
                   type: "Point",
                 },
+                location: {
+                  coordinates: [newLat, newLong],
+                  type: "Point",
+                },
+
                 UpdateLocationDate: new Date(),
               },
             }
           ).then(() => {
+            const location = {
+              coordinates: [newLat, newLong],
+              type: "Point",
+            };
             const data = {
               status:
                 driver.isOnline === true && driver.isBusy == false
@@ -750,7 +767,7 @@ io.on("connection", (socket) => {
                   ? 3
                   : 0,
               driverID: driver.driverID,
-              location: driver.location,
+              location: location,
               categoryCarTypeID: driver.categoryCarTypeID,
               phoneNumber: driver.phoneNumber,
               idNo: driver.idNo,
@@ -1040,6 +1057,7 @@ io.on("connection", (socket) => {
     console.log("admin disconnected");
   });
 });
+
 const Port = process.env.Port || 5000;
 server.listen(Port, () => {
   console.log(` Server running on port ${Port}`);
