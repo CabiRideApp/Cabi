@@ -263,6 +263,13 @@ app.post("/driver/updateLocation", async (req, res) => {
                 coordinates: [req.query.lat, req.query.lng],
                 type: "Point",
               },
+              oldLocation: {
+                coordinates: [
+                  driver.location.coordinates[0],
+                  driver.location.coordinates[1],
+                ],
+                type: "Point",
+              },
               UpdateLocationDate: new Date(),
             },
           }
@@ -722,6 +729,13 @@ io.on("connection", (socket) => {
                   coordinates: [data.lat, data.long],
                   type: "Point",
                 },
+                oldLocation: {
+                  coordinates: [
+                    driver.location.coordinates[0],
+                    driver.location.coordinates[1],
+                  ],
+                  type: "Point",
+                },
                 UpdateLocationDate: new Date(),
               },
             }
@@ -792,7 +806,14 @@ io.on("connection", (socket) => {
         );
         var driversList = [];
         res.map((driver) => {
-          driversList.push(driver.location.coordinates);
+          const temp = {
+            lat: driver.location.coordinates[0],
+            lng: driver.location.coordinates[1],
+            driverID: driver.driverID,
+            oldLat: driver.oldLocation.coordinates[0],
+            oldLng: driver.oldLocation.coordinates[1],
+          };
+          if (driversList.length < 5) driversList.push(temp);
         });
         const data1 = {
           drivers: driversList,
