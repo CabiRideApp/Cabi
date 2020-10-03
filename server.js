@@ -1121,6 +1121,37 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("AdminGetCount", (data) => {
+    //console.log(data);
+    try {
+      DriverM.find({
+        isBusy: true,
+      }).then(async (busy) => {
+        DriverM.find({
+          isOnline: true,
+        }).then(async (online) => {
+          DriverM.find({
+            isOnline: false,
+          }).then((offline) => {
+            const data = {
+              busy: busy.length,
+              online: online.length,
+              offline: offline.length,
+            };
+            console.log(data);
+
+            admins.forEach((admin) => {
+              // console.log(admin);
+              io.to(admin).emit("AdminGetCount", data);
+            });
+          });
+        });
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  });
+
   socket.on("join", (id) => {
     users.set(id, socket.id);
     console.log(users);
