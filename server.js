@@ -1124,29 +1124,84 @@ io.on("connection", (socket) => {
   socket.on("AdminGetCount", (data) => {
     //console.log(data);
     try {
-      DriverM.find({
-        isBusy: true,
-      }).then(async (busy) => {
+      if (data.lat === 0) {
         DriverM.find({
-          isOnline: true,
-        }).then(async (online) => {
+          isBusy: true,
+        }).then(async (busy) => {
           DriverM.find({
-            isOnline: false,
-          }).then((offline) => {
-            const data = {
-              busy: busy.length,
-              online: online.length,
-              offline: offline.length,
-            };
-            console.log(data);
+            isOnline: true,
+          }).then(async (online) => {
+            DriverM.find({
+              isOnline: false,
+            }).then((offline) => {
+              const data = {
+                busy: busy.length,
+                online: online.length,
+                offline: offline.length,
+                total: busy.length + online.length + offline.length,
+              };
+              //console.log(data);
 
-            admins.forEach((admin) => {
-              // console.log(admin);
-              io.to(admin).emit("AdminGetCount", data);
+              admins.forEach((admin) => {
+                // console.log(admin);
+                io.to(admin).emit("AdminGetCount", data);
+              });
             });
           });
         });
-      });
+      } else {
+        DriverM.find({
+          isBusy: true,
+          location: {
+            $near: {
+              $geometry: {
+                type: "Point",
+                coordinates: [data.lat, data.lng],
+              },
+            },
+            $maxDistance: data.maxDistance,
+          },
+        }).then(async (busy) => {
+          DriverM.find({
+            isOnline: true,
+            location: {
+              $near: {
+                $geometry: {
+                  type: "Point",
+                  coordinates: [data.lat, data.lng],
+                },
+              },
+              $maxDistance: data.maxDistance,
+            },
+          }).then(async (online) => {
+            DriverM.find({
+              isOnline: false,
+              location: {
+                $near: {
+                  $geometry: {
+                    type: "Point",
+                    coordinates: [data.lat, data.lng],
+                  },
+                },
+                $maxDistance: data.maxDistance,
+              },
+            }).then((offline) => {
+              const data = {
+                busy: busy.length,
+                online: online.length,
+                offline: offline.length,
+                total: busy.length + online.length + offline.length,
+              };
+              //console.log(data);
+
+              admins.forEach((admin) => {
+                // console.log(admin);
+                io.to(admin).emit("AdminGetCount", data);
+              });
+            });
+          });
+        });
+      }
     } catch (err) {
       console.log(err);
     }
