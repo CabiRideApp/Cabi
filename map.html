@@ -14,11 +14,11 @@
         userid=0
         socket.emit("join",userid)
         const data={
-             lat: 30.78636329768655,
-            long: 31.011168546974655,
+             long: 31.021158526974656,
+            lat: 30.480439428406534 ,
          //  maxDistance:10000
         }
-        socket.emit("AdminGetCount")
+        socket.emit("getavailable",data)
          socket.on('getavailable', function (data) {
                 console.log(data);
             }); 

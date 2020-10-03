@@ -897,7 +897,12 @@ io.on("connection", (socket) => {
       }).then(async (res) => {
         //console.log(res);
         var near = res[0];
-        // console.log(near);
+        console.log(
+          near.location.coordinates[0],
+          near.location.coordinates[1],
+          data.long,
+          data.lat
+        );
 
         const time = await DistinationDuration(
           near.location.coordinates[0],
@@ -918,9 +923,10 @@ io.on("connection", (socket) => {
         });
         const data1 = {
           drivers: driversList,
-          time: time[0].duration.value / 60,
+          time:
+            time[0].duration == undefined ? -1 : time[0].duration.value / 60,
         };
-        //console.log(data1);
+        // console.log(data1);
 
         let user_id = users.get(data.userid);
         io.to(user_id).emit("getavailable", data1);
@@ -1251,7 +1257,7 @@ const DistinationDuration = async (
       "&key=" +
       google_Key
   );
-  // console.log(resp.data.rows[0]);
+  // console.log(resp);
   return resp.data.rows[0].elements;
 };
 
