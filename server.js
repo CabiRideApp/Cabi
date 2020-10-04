@@ -1093,7 +1093,9 @@ io.on("connection", (socket) => {
         const data1 = {
           drivers: driversList,
           time:
-            time[0].duration == undefined ? -1 : time[0].duration.value / 60,
+            time[0].duration == undefined
+              ? -1
+              : parseInt(time[0].duration.value / 60),
         };
         // console.log(data1);
 
