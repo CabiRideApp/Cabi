@@ -18,8 +18,8 @@
             lat: 30.480439428406534 ,
          //  maxDistance:10000
         }
-        socket.emit("getavailable",data)
-         socket.on('getavailable', function (data) {
+        //socket.emit("getavailable",data)
+         socket.on('trackUser', function (data) {
                 console.log(data);
             }); 
      /* socket.on('trackAdmin', function (data) {

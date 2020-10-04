@@ -58,7 +58,7 @@ app.post("/driver/is_Online", async (req, res) => {
           },
         }
       ).then(() => {
-        console.log(driver);
+        //console.log(driver);
         const ISONLINE = true;
         const data = {
           status:
@@ -87,6 +87,24 @@ app.post("/driver/is_Online", async (req, res) => {
         };
         admins.forEach((admin) => {
           io.to(admin).emit("trackAdmin", data);
+        });
+        const data1 = {
+          status:
+            ISONLINE === true && driver.isBusy == false
+              ? 1
+              : ISONLINE == true && driver.isBusy == true
+              ? 2
+              : ISONLINE == false
+              ? 3
+              : 0,
+          driverID: driver.driverID,
+          lat: driver.location.coordinates[0],
+          lng: driver.location.coordinates[1],
+          oldLat: driver.oldLocation.coordinates[0],
+          oldLng: driver.oldLocation.coordinates[1],
+        };
+        users.forEach((user) => {
+          io.to(user).emit("trackUser", data1);
         });
       });
     }
@@ -128,9 +146,28 @@ app.post("/driver/is_Online", async (req, res) => {
           updateLocationDate: driver.updateLocationDate,
           trip: driver.isBusy ? driver.busyTrip : "",
         };
-        console.log(data);
+        // console.log(data);
         admins.forEach((admin) => {
           io.to(admin).emit("trackAdmin", data);
+        });
+        const data1 = {
+          status:
+            ISONLINE === true && driver.isBusy == false
+              ? 1
+              : ISONLINE == true && driver.isBusy == true
+              ? 2
+              : ISONLINE == false
+              ? 3
+              : 0,
+          driverID: driver.driverID,
+          lat: driver.location.coordinates[0],
+          lng: driver.location.coordinates[1],
+          oldLat: driver.oldLocation.coordinates[0],
+          oldLng: driver.oldLocation.coordinates[1],
+        };
+        // console.log(data1);
+        users.forEach((user) => {
+          io.to(user).emit("trackUser", data1);
         });
       });
     }
@@ -193,6 +230,25 @@ app.post("/driver/is_Busy", async (req, res) => {
         admins.forEach((admin) => {
           io.to(admin).emit("trackAdmin", data);
         });
+        const data1 = {
+          status:
+            driver.isOnline === true && ISBUSY == false
+              ? 1
+              : driver.isOnline == true && ISBUSY == true
+              ? 2
+              : driver.isOnline == false
+              ? 3
+              : 0,
+          driverID: driver.driverID,
+          lat: driver.location.coordinates[0],
+          lng: driver.location.coordinates[1],
+          oldLat: driver.oldLocation.coordinates[0],
+          oldLng: driver.oldLocation.coordinates[1],
+        };
+        console.log(data1);
+        users.forEach((user) => {
+          io.to(user).emit("trackUser", data1);
+        });
       });
     }
     if (req.query.status == 2) {
@@ -235,6 +291,25 @@ app.post("/driver/is_Busy", async (req, res) => {
         };
         admins.forEach((admin) => {
           io.to(admin).emit("trackAdmin", data);
+        });
+        const data1 = {
+          status:
+            driver.isOnline === true && ISBUSY == false
+              ? 1
+              : driver.isOnline == true && ISBUSY == true
+              ? 2
+              : driver.isOnline == false
+              ? 3
+              : 0,
+          driverID: driver.driverID,
+          lat: driver.location.coordinates[0],
+          lng: driver.location.coordinates[1],
+          oldLat: driver.oldLocation.coordinates[0],
+          oldLng: driver.oldLocation.coordinates[1],
+        };
+        console.log(data1);
+        users.forEach((user) => {
+          io.to(user).emit("trackUser", data1);
         });
       });
     }
@@ -314,6 +389,25 @@ app.post("/driver/updateLocation", async (req, res) => {
             io.to(admin).emit("trackAdmin", data);
           });
           console.log(data);
+          const data1 = {
+            status:
+              driver.isOnline === true && driver.isBusy == false
+                ? 1
+                : driver.isOnline == true && driver.isBusy == true
+                ? 2
+                : driver.isOnline == false
+                ? 3
+                : 0,
+            driverID: driver.driverID,
+            lat: location.coordinates[0],
+            lng: location.coordinates[1],
+            oldLat: driver.location.coordinates[0],
+            oldLng: driver.location.coordinates[1],
+          };
+          console.log(data1);
+          users.forEach((user) => {
+            io.to(user).emit("trackUser", data1);
+          });
           res.json({
             sucess: 1,
             message: "update location success",
@@ -466,6 +560,24 @@ io.on("connection", (socket) => {
                       admins.forEach((admin) => {
                         io.to(admin).emit("trackAdmin", data);
                       });
+                      const data1 = {
+                        status:
+                          dr[0].isOnline === true && dr[0].isBusy == false
+                            ? 1
+                            : dr[0].isOnline == true && dr[0].isBusy == true
+                            ? 2
+                            : dr[0].isOnline == false
+                            ? 3
+                            : 0,
+                        driverID: dr[0].driverID,
+                        lat: dr[0].location.coordinates[0],
+                        lng: dr[0].location.coordinates[1],
+                        oldLat: dr[0].oldLocation.coordinates[0],
+                        oldLng: dr[0].oldLocation.coordinates[1],
+                      };
+                      users.forEach((user) => {
+                        io.to(user).emit("trackUser", data1);
+                      });
                     })
                     .catch((error) => {
                       console.log(error);
@@ -557,6 +669,25 @@ io.on("connection", (socket) => {
                             console.log(data);
                             admins.forEach((admin) => {
                               io.to(admin).emit("trackAdmin", data);
+                            });
+                            const data1 = {
+                              status:
+                                dr[1].isOnline === true && dr[1].isBusy == false
+                                  ? 1
+                                  : dr[1].isOnline == true &&
+                                    dr[1].isBusy == true
+                                  ? 2
+                                  : dr[1].isOnline == false
+                                  ? 3
+                                  : 1,
+                              driverID: dr[1].driverID,
+                              lat: dr[1].location.coordinates[0],
+                              lng: dr[1].location.coordinates[1],
+                              oldLat: dr[1].oldLocation.coordinates[0],
+                              oldLng: dr[1].oldLocation.coordinates[1],
+                            };
+                            users.forEach((user) => {
+                              io.to(user).emit("trackUser", data1);
                             });
                           })
                           .catch((error) => {
@@ -652,6 +783,26 @@ io.on("connection", (socket) => {
                               console.log(data);
                               admins.forEach((admin) => {
                                 io.to(admin).emit("trackAdmin", data);
+                              });
+                              const data1 = {
+                                status:
+                                  dr[2].isOnline === true &&
+                                  dr[2].isBusy == false
+                                    ? 1
+                                    : dr[2].isOnline == true &&
+                                      dr[2].isBusy == true
+                                    ? 2
+                                    : dr[2].isOnline == false
+                                    ? 3
+                                    : 2,
+                                driverID: dr[2].driverID,
+                                lat: dr[2].location.coordinates[0],
+                                lng: dr[2].location.coordinates[1],
+                                oldLat: dr[2].oldLocation.coordinates[0],
+                                oldLng: dr[2].oldLocation.coordinates[1],
+                              };
+                              users.forEach((user) => {
+                                io.to(user).emit("trackUser", data1);
                               });
                             })
                             .catch((error) => {
@@ -866,9 +1017,27 @@ io.on("connection", (socket) => {
               updateLocationDate: driver.updateLocationDate,
               trip: driver.isBusy ? driver.busyTrip : "",
             };
-            console.log(data);
+            // console.log(data);
             admins.forEach((admin) => {
               io.to(admin).emit("trackAdmin", data);
+            });
+            const data1 = {
+              status:
+                driver.isOnline === true && driver.isBusy == false
+                  ? 1
+                  : driver.isOnline == true && driver.isBusy == true
+                  ? 2
+                  : driver.isOnline == false
+                  ? 3
+                  : 0,
+              driverID: driver.driverID,
+              lat: location.coordinates[0],
+              lng: location.coordinates[1],
+              oldLat: driver.oldLocation.coordinates[0],
+              oldLng: driver.oldLocation.coordinates[1],
+            };
+            users.forEach((user) => {
+              io.to(user).emit("trackUser", data1);
             });
           })
         )
