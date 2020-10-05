@@ -883,7 +883,6 @@ io.on("connection", (socket) => {
   socket.on("getavailable", (data) => {
     // console.log(data);
     userinterval.set(data.userid, data.lat);
-
     try {
       DriverM.find({
         isBusy: false,
@@ -950,7 +949,20 @@ io.on("connection", (socket) => {
             },
           },
         }).then(async (res) => {
-          //console.log(res);
+          var near = res[0];
+          console.log(
+            near.location.coordinates[0],
+            near.location.coordinates[1],
+            data.long,
+            data.lat
+          );
+
+          const time = await DistinationDuration(
+            near.location.coordinates[0],
+            near.location.coordinates[1],
+            data.long,
+            data.lat
+          );
           var driversList = [];
           res.map((driver) => {
             const temp = {
@@ -962,9 +974,15 @@ io.on("connection", (socket) => {
             };
             if (driversList.length < 5) driversList.push(temp);
           });
+          const data1 = {
+            drivers: driversList,
+            time:
+              time[0].duration == undefined
+                ? -1
+                : parseInt(time[0].duration.value / 60),
+          };
           let user_id = users.get(data.userid);
-          console.log(data.lat);
-          io.to(user_id).emit("getavailable", driversList);
+          io.to(user_id).emit("getavailable", data1);
           if (
             users.get(data.userid) == undefined ||
             userinterval.get(data.userid) != data.lat
@@ -974,7 +992,7 @@ io.on("connection", (socket) => {
           }
         });
       };
-      var interval = setInterval(fun, 30000);
+      var interval = setInterval(fun, 20000);
     } catch (err) {
       console.log(err);
     }
@@ -1012,16 +1030,16 @@ io.on("connection", (socket) => {
         }
       );
       // console.log(promoResponse.data);
-    }
-    if (
-      (!promoResponse.data.status || !promoResponse.data.data.isValid) &&
-      data.promoCode
-    ) {
-      var user_id = users.get(data.userId);
-      io.to(user_id).emit("promoCode", {
-        messageEn: promoResponse.messageEn,
-        messageAr: promoResponse.messageAr,
-      });
+      if (
+        (!promoResponse.data.status || !promoResponse.data.data.isValid) &&
+        data.promoCode
+      ) {
+        var user_id = users.get(data.userId);
+        io.to(user_id).emit("promoCode", {
+          messageEn: promoResponse.messageEn,
+          messageAr: promoResponse.messageAr,
+        });
+      }
     } else {
       var discountType;
       var discountValue;
@@ -1033,83 +1051,223 @@ io.on("connection", (socket) => {
         discountValue = 0;
       }
       try {
-        const category = CategoryFareM.find({}).then(async (res) => {
-          //console.log("tttt", res);
-          var responseArray = [];
-          for (var i = 1; i <= res.length; i++) {
-            //  console.log(i);
-            const temp = await DriverM.findOne({
-              isBusy: false,
-              isOnline: true,
-              isDeleted: false,
-              location: {
-                $near: {
-                  $geometry: {
-                    type: "Point",
-                    coordinates: [data.pickupLat, data.pickupLng],
-                  },
-                  //$maxDistance: 5000,
-                },
-              },
-              categoryCarTypeID: i,
-            }).then(async (driver) => {
-              if (i == 1 && driver == null) {
-                let user_id = users.get(data.userid);
-                io.to(user_id).emit("getavailable", {
-                  msg: "لا يوجد سائق متاح في منطقتك حالياً",
-                });
-              } else if (driver != null) {
-                //  console.log(driver);
-                const e = await DistinationDuration(
-                  driver.location.coordinates[0],
-                  driver.location.coordinates[1],
-                  data.pickupLng,
-                  data.pickupLat
-                ).then(async (driverTime) => {
-                  //  console.log("nm", i, driverTime);
+        const time = await DistinationDuration(
+          data.dropoffLat,
+          data.dropoffLng,
+          data.pickupLng,
+          data.pickupLat
+        ).then(async (time) => {
+          const category = await CategoryFareM.find({}).then(async (res) => {
+            //console.log("tttt", res);
 
-                  const Cost = await tripCost(
+            var responseArray = [];
+            var mainCatTime;
+            for (var i = 1; i <= res.length; i++) {
+              //console.log(i);
+              const temp = await DriverM.findOne({
+                isBusy: false,
+                isOnline: true,
+                isDeleted: false,
+                location: {
+                  $near: {
+                    $geometry: {
+                      type: "Point",
+                      coordinates: [data.pickupLat, data.pickupLng],
+                    },
+                    //$maxDistance: 5000,
+                  },
+                },
+                categoryCarTypeID: i,
+              }).then(async (driver) => {
+                if (i == 1 && driver == null) {
+                  let user_id = users.get(data.userid);
+                  io.to(user_id).emit("getavailable", {
+                    msg: "لا يوجد سائق متاح في منطقتك حالياً",
+                  });
+                } else if (driver != null) {
+                  //  console.log(driver);
+                  const e = await DistinationDuration(
+                    driver.location.coordinates[0],
+                    driver.location.coordinates[1],
                     data.pickupLng,
-                    data.pickupLat,
-                    data.dropoffLng,
-                    data.dropoffLat,
-                    driver.categoryCarTypeID,
-                    1,
-                    10,
-                    discountType,
-                    discountValue
-                  ).then((cost) => {
-                    //   console.log("cost", i, cost);
-                    responseArray.push({
-                      NameAR: driver.driverNameAr,
-                      NameEn: driver.driverNameEn,
-                      Photo: driver.driverImage,
-                      Minutes: driverTime[0].duration.text,
-                      dest: driverTime[0].distance.text,
-                      Cost: cost,
+                    data.pickupLat
+                  ).then(async (driverTime) => {
+                    //  console.log("nm", i, driverTime);
+                    const Cost = await tripCost(
+                      data.pickupLng,
+                      data.pickupLat,
+                      data.dropoffLng,
+                      data.dropoffLat,
+                      driver.categoryCarTypeID,
+                      discountType,
+                      discountValue
+                    ).then((cost) => {
+                      //   console.log("cost", i, cost);
+                      responseArray.push({
+                        NameAR: driver.driverNameAr,
+                        NameEn: driver.driverNameEn,
+                        Photo: driver.driverImage,
+                        Minutes: parseInt(driverTime[0].duration.value / 60),
+                        dest: parseInt(driverTime[0].distance.value / 1000),
+                        Cost: cost,
+                        isMain: res[i - 1].isMain,
+                      });
+                      if (res[i - 1].isMain)
+                        mainCatTime = parseInt(
+                          driverTime[0].duration.value / 60
+                        );
                     });
                   });
-                });
-              }
-            });
-          }
-          var min = 100000;
-          responseArray.map((driver) => {
-            driver.Cost < min ? (min = driver.Cost) : "";
+                }
+              });
+            }
+
+            var date = new Date();
+            var driveTime =
+              date.getHours() * 60 +
+              date.getMinutes() +
+              parseInt(time[0].duration.value / 60);
+            const data1 = {
+              categories: responseArray,
+              mainCatTime,
+              driveTime:
+                parseInt(driveTime / 60) +
+                ":" +
+                (driveTime - parseInt(driveTime / 60) * 60),
+            };
+            // console.log(data1);
+            var user_id = users.get(data.userId);
+            io.to(user_id).emit("listCategory", data1);
           });
-          //  console.log(min);
-          responseArray.map((driver) => {
-            Object.defineProperty(driver, "isCheap", {
-              value: driver.Cost === min ? true : false,
-              writable: true,
-              enumerable: true,
-              configurable: true,
-            });
-            // console.log(driver);
+        });
+      } catch {}
+    }
+  });
+
+  socket.on("trackCategory", async (data) => {
+    if (data.promoCode) {
+      const promoResponse = await axios.get(
+        "https://devmachine.taketosa.com/api/Trip/CheckPromoCode",
+        {
+          params: {
+            promoCode: data.promoCode,
+          },
+          headers: {
+            Authorization: `Bearer ${data.token}`,
+          },
+        }
+      );
+      // console.log(promoResponse.data);
+      if (
+        (!promoResponse.data.status || !promoResponse.data.data.isValid) &&
+        data.promoCode
+      ) {
+        var user_id = users.get(data.userId);
+        io.to(user_id).emit("promoCode", {
+          messageEn: promoResponse.messageEn,
+          messageAr: promoResponse.messageAr,
+        });
+      }
+    } else {
+      var discountType;
+      var discountValue;
+      if (data.promoCode) {
+        (discountType = promoResponse.data.data.discountType),
+          (discountValue = promoResponse.data.data.discountValue);
+      } else {
+        discountType = -1;
+        discountValue = 0;
+      }
+      try {
+        const time = await DistinationDuration(
+          data.dropoffLat,
+          data.dropoffLng,
+          data.pickupLng,
+          data.pickupLat
+        ).then(async (time) => {
+          const category = await CategoryFareM.findOne({
+            categoryCarTypeID: data.carCategory,
+          }).then(async (res) => {
+            //console.log("tttt", res);
+
+            var mainCatTime;
+            for (var i = 1; i <= res.length; i++) {
+              //console.log(i);
+              const temp = await DriverM.findOne({
+                isBusy: false,
+                isOnline: true,
+                isDeleted: false,
+                location: {
+                  $near: {
+                    $geometry: {
+                      type: "Point",
+                      coordinates: [data.pickupLat, data.pickupLng],
+                    },
+                    //$maxDistance: 5000,
+                  },
+                },
+                categoryCarTypeID: data.carCategory,
+              }).then(async (driver) => {
+                if (driver == null) {
+                  let user_id = users.get(data.userid);
+                  io.to(user_id).emit("trackCategory", {
+                    msg: "لا يوجد سائق متاح في منطقتك حالياً",
+                  });
+                } else if (driver != null) {
+                  //  console.log(driver);
+                  const e = await DistinationDuration(
+                    driver.location.coordinates[0],
+                    driver.location.coordinates[1],
+                    data.pickupLng,
+                    data.pickupLat
+                  ).then(async (driverTime) => {
+                    //  console.log("nm", i, driverTime);
+                    const Cost = await tripCost(
+                      data.pickupLng,
+                      data.pickupLat,
+                      data.dropoffLng,
+                      data.dropoffLat,
+                      driver.categoryCarTypeID,
+                      discountType,
+                      discountValue
+                    ).then((cost) => {
+                      //   console.log("cost", i, cost);
+                      responseArray.push({
+                        NameAR: driver.driverNameAr,
+                        NameEn: driver.driverNameEn,
+                        Photo: driver.driverImage,
+                        Minutes: parseInt(driverTime[0].duration.value / 60),
+                        dest: parseInt(driverTime[0].distance.value / 1000),
+                        Cost: cost,
+                        isMain: res[i - 1].isMain,
+                      });
+                      if (res[i - 1].isMain)
+                        mainCatTime = parseInt(
+                          driverTime[0].duration.value / 60
+                        );
+                    });
+                  });
+                }
+              });
+            }
+
+            var date = new Date();
+            var driveTime =
+              date.getHours() * 60 +
+              date.getMinutes() +
+              parseInt(time[0].duration.value / 60);
+            const data1 = {
+              categories: responseArray,
+              mainCatTime,
+              driveTime:
+                parseInt(driveTime / 60) +
+                ":" +
+                (driveTime - parseInt(driveTime / 60) * 60),
+            };
+            // console.log(data1);
+            var user_id = users.get(data.userId);
+            io.to(user_id).emit("listCategory", data1);
           });
-          //console.log(responseArray);
-          var user_id = users.get(data.userId);
-          io.to(user_id).emit("listCategory", responseArray);
         });
       } catch {}
     }
@@ -1317,7 +1475,6 @@ const tripCost = async (
   const timedest = await DistinationDuration(
     pickupLat,
     pickupLng,
-
     dropoffLng,
     dropoffLat
   );
@@ -1328,7 +1485,7 @@ const tripCost = async (
   const CategoryFare = await CategoryFareM.findOne({
     categoryCarTypeID: carCategory,
   });
-  //console.log(CategoryFare)
+  //console.log(CategoryFare);
   const tax = await DeliverySettingM.find({
     sort: 1,
   });
