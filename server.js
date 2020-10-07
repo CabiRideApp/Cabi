@@ -14,6 +14,7 @@ const admin = require("firebase-admin");
 var serviceAccount = require("./cabi-app-firebase-adminsdk-4cy4f-c6feddd07b.json");
 const {listIndexes} = require("./models/Driver");
 const {fdatasync} = require("fs");
+const {v4: uuidv4} = require("uuid");
 
 require("dotenv/config");
 
@@ -884,7 +885,8 @@ io.on("connection", (socket) => {
 
   socket.on("getavailable", (data) => {
     // console.log(data);
-    userinterval.set(data.userid, data.lat);
+    const id = uuidv4();
+    userinterval.set(data.userid, id);
     try {
       DriverM.find({
         isBusy: false,
@@ -937,6 +939,13 @@ io.on("connection", (socket) => {
         io.to(user_id).emit("getavailable", data1);
       });
       const fun = () => {
+        if (
+          users.get(data.userid) == undefined ||
+          userinterval.get(data.userid) != id
+        ) {
+          clearInterval(interval);
+          //console.log("kkkkkkkkk");
+        }
         DriverM.find({
           isBusy: false,
           isOnline: true,
@@ -983,15 +992,12 @@ io.on("connection", (socket) => {
                 ? -1
                 : parseInt(time[0].duration.value / 60),
           };
-          let user_id = users.get(data.userid);
-          io.to(user_id).emit("getavailable", data1);
           if (
-            users.get(data.userid) == undefined ||
-            userinterval.get(data.userid) != data.lat
+            users.get(data.userid) != undefined ||
+            userinterval.get(data.userid) == id
           ) {
-            clearInterval(interval);
-            //console.log("kkkkkkkkk");
-            userinterval.delete(data.userid);
+            let user_id = users.get(data.userid);
+            io.to(user_id).emit("getavailable", data1);
           }
         });
       };
@@ -1020,7 +1026,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("listCategory", async (data) => {
-    listinterval.set(data.userid, data.dropoffLat);
+    const id = uuidv4();
+    listinterval.set(data.userid, id);
     if (data.promoCode) {
       const promoResponse = await axios.get(
         "https://devmachine.taketosa.com/api/Trip/CheckPromoCode",
@@ -1135,10 +1142,18 @@ io.on("connection", (socket) => {
               mainCatTime,
               driveTime,
             };
+            //console.log(data1);
             var user_id = users.get(data.userId);
             io.to(user_id).emit("listCategory", data1);
           });
           const fun = () => {
+            if (
+              users.get(data.userid) == undefined ||
+              listinterval.get(data.userid) != id
+            ) {
+              clearInterval(interval);
+              //console.log("kkkkkkkkk");
+            }
             const category = CategoryFareM.find({}).then(async (res) => {
               //console.log("tttt", res);
 
@@ -1213,16 +1228,13 @@ io.on("connection", (socket) => {
                 mainCatTime,
                 driveTime,
               };
-              // console.log(data.dropoffLat);
-              var user_id = users.get(data.userId);
-              io.to(user_id).emit("listCategory", data1);
               if (
-                users.get(data.userid) == undefined ||
-                listinterval.get(data.userid) != data.dropoffLat
+                users.get(data.userid) != undefined ||
+                listinterval.get(data.userid) == id
               ) {
-                clearInterval(interval);
-                //console.log("kkkkkkkkk");
-                listinterval.delete(data.userid);
+                var user_id = users.get(data.userId);
+                console.log(id);
+                io.to(user_id).emit("listCategory", data1);
               }
             });
           };
@@ -1233,7 +1245,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("trackCategory", async (data) => {
-    trackinterval.set(data.userid, data.dropoffLat);
+    const id = uuidv4();
+    //console.log(id);
+    trackinterval.set(data.userid, id);
     if (data.promoCode) {
       const promoResponse = await axios.get(
         "https://devmachine.taketosa.com/api/Trip/CheckPromoCode",
@@ -1333,7 +1347,7 @@ io.on("connection", (socket) => {
                       categories: temp,
                       driveTime,
                     };
-
+                    // console.log(data1);
                     var user_id = users.get(data.userId);
                     io.to(user_id).emit("listCategory", data1);
                   });
@@ -1341,6 +1355,14 @@ io.on("connection", (socket) => {
               }
             });
             const fun = () => {
+              //console.log(id);
+              if (
+                users.get(data.userid) == undefined ||
+                trackinterval.get(data.userid) != id
+              ) {
+                clearInterval(interval);
+                //console.log("kkkkkkkkk");
+              }
               DriverM.findOne({
                 isBusy: false,
                 isOnline: true,
@@ -1395,16 +1417,13 @@ io.on("connection", (socket) => {
                         categories: temp,
                         driveTime,
                       };
-                      // console.log(data1);
-                      var user_id = users.get(data.userId);
-                      io.to(user_id).emit("listCategory", data1);
+                      //console.log(data1);
                       if (
-                        users.get(data.userid) == undefined ||
-                        trackinterval.get(data.userid) != data.dropoffLat
+                        users.get(data.userid) != undefined ||
+                        trackinterval.get(data.userid) == id
                       ) {
-                        clearInterval(interval);
-                        //console.log("kkkkkkkkk");
-                        trackinterval.delete(data.userid);
+                        var user_id = users.get(data.userId);
+                        io.to(user_id).emit("listCategory", data1);
                       }
                     });
                   });
@@ -1572,6 +1591,9 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", (number) => {
     users.delete(number);
+    listinterval.delete(number);
+    userinterval.delete(number);
+    trackinterval.delete(number);
     console.log("user disconnected");
   });
 
