@@ -399,6 +399,7 @@ io.on("connection", (socket) => {
             promoCode: data.promoCode,
             categoryCarTypeID: data.categoryCarTypeID,
             cancelReasonID: data.cancelReasonID,
+            paymentStatusID: data.paymentStatusID,
             tripID: Trip_ID,
             tripStatusId: 2,
             tripDrivers: [],
@@ -420,6 +421,7 @@ io.on("connection", (socket) => {
             userId: userID,
             tripID: Trip_ID,
             driverTime: parseInt(driverTime[0].duration.value / 60),
+            paymentStatusID: data.paymentStatusID,
           };
 
           if (drivers.length > 0) {
@@ -446,6 +448,7 @@ io.on("connection", (socket) => {
             console.log(reachTime, "reachTime");
 
             from_to.reachTime = parseInt(reachTime[0].duration.value / 60);
+            from_to.arriveTime = driveTimeCalc(0, reachTime);
 
             try {
               console.log("begin");
@@ -466,15 +469,41 @@ io.on("connection", (socket) => {
                     });
                     socket.once("cancel", (data3) => {
                       try {
-                        admin.messaging().sendToDevice(
-                          drivers[0].tokenID,
-                          {
-                            data: {
-                              message: "trip canceled",
+                        trip.cancelReasonID = data3;
+                        admin
+                          .messaging()
+                          .sendToDevice(
+                            drivers[0].tokenID,
+                            {
+                              data: {
+                                message: "trip canceled",
+                              },
                             },
-                          },
-                          notification_options
-                        );
+                            notification_options
+                          )
+                          .then(() => {
+                            try {
+                              trip.tripDrivers = dr;
+                              const savedTrip = trip.save();
+                              savedTrip.then((saved) => {
+                                try {
+                                  axios({
+                                    method: "post",
+                                    url:
+                                      "https://devmachine.taketosa.com/api/Trip/NewTrip",
+                                    data: saved,
+                                    headers: {
+                                      Authorization: `Bearer ${data.token}`,
+                                    },
+                                  });
+                                } catch (error) {
+                                  console.log("abc");
+                                }
+                              });
+                            } catch (error) {
+                              console.log(error);
+                            }
+                          });
                       } catch (error) {
                         console.log("error");
                       }
@@ -571,14 +600,15 @@ io.on("connection", (socket) => {
                       });
                       savedTrip.then((saved) => {
                         try {
-                          // axios({
-                          //   method: "post",
-                          //   url: "https://devmachine.taketosa.com/api/Trip/NewTrip",
-                          //   data: saved,
-                          //   headers: {
-                          //     Authorization: `Bearer ${data.token}`,
-                          //   },
-                          // });
+                          axios({
+                            method: "post",
+                            url:
+                              "https://devmachine.taketosa.com/api/Trip/NewTrip",
+                            data: saved,
+                            headers: {
+                              Authorization: `Bearer ${data.token}`,
+                            },
+                          });
                         } catch (erro) {
                           console.log("abs");
                         }
@@ -613,6 +643,7 @@ io.on("connection", (socket) => {
                               .emit("driverRespond", data2);
                           });
                           socket.once("cancel", (data3) => {
+                            trip.cancelReasonID = data3;
                             clearInterval(x);
                             admin
                               .messaging()
@@ -713,15 +744,15 @@ io.on("connection", (socket) => {
                             });
                             savedTrip.then((saved) => {
                               try {
-                                // axios({
-                                //   method: "post",
-                                //   url:
-                                //     "https://devmachine.taketosa.com/api/Trip/NewTrip",
-                                //   data: saved,
-                                //   headers: {
-                                //     Authorization: `Bearer ${data.token}`,
-                                //   },
-                                // });
+                                axios({
+                                  method: "post",
+                                  url:
+                                    "https://devmachine.taketosa.com/api/Trip/NewTrip",
+                                  data: saved,
+                                  headers: {
+                                    Authorization: `Bearer ${data.token}`,
+                                  },
+                                });
                               } catch (error) {
                                 console.log("abs");
                               }
@@ -756,6 +787,7 @@ io.on("connection", (socket) => {
                                     .emit("driverRespond", data2);
                                 });
                                 socket.once("cancel", (data3) => {
+                                  trip.cancelReasonID = data3;
                                   clearInterval(x);
                                   admin
                                     .messaging()
@@ -894,15 +926,15 @@ io.on("connection", (socket) => {
                               const savedTrip = trip.save();
                               savedTrip.then((saved) => {
                                 try {
-                                  // axios({
-                                  //   method: "post",
-                                  //   url:
-                                  //     "https://devmachine.taketosa.com/api/Trip/NewTrip",
-                                  //   data: saved,
-                                  //   headers: {
-                                  //     Authorization: `Bearer ${data.token}`,
-                                  //   },
-                                  // });
+                                  axios({
+                                    method: "post",
+                                    url:
+                                      "https://devmachine.taketosa.com/api/Trip/NewTrip",
+                                    data: saved,
+                                    headers: {
+                                      Authorization: `Bearer ${data.token}`,
+                                    },
+                                  });
                                 } catch (error) {
                                   console.log("abc");
                                 }
@@ -932,15 +964,15 @@ io.on("connection", (socket) => {
                             const savedTrip = trip.save();
                             savedTrip.then((saved) => {
                               try {
-                                // axios({
-                                //   method: "post",
-                                //   url:
-                                //     "https://devmachine.taketosa.com/api/Trip/NewTrip",
-                                //   data: saved,
-                                //   headers: {
-                                //     Authorization: `Bearer ${data.token}`,
-                                //   },
-                                // });
+                                axios({
+                                  method: "post",
+                                  url:
+                                    "https://devmachine.taketosa.com/api/Trip/NewTrip",
+                                  data: saved,
+                                  headers: {
+                                    Authorization: `Bearer ${data.token}`,
+                                  },
+                                });
                               } catch (error) {
                                 console.log("abc");
                               }
@@ -971,14 +1003,15 @@ io.on("connection", (socket) => {
                       const savedTrip = trip.save();
                       savedTrip.then((saved) => {
                         try {
-                          // axios({
-                          //   method: "post",
-                          //   url: "https://devmachine.taketosa.com/api/Trip/NewTrip",
-                          //   data: saved,
-                          //   headers: {
-                          //     Authorization: `Bearer ${data.token}`,
-                          //   },
-                          // });
+                          axios({
+                            method: "post",
+                            url:
+                              "https://devmachine.taketosa.com/api/Trip/NewTrip",
+                            data: saved,
+                            headers: {
+                              Authorization: `Bearer ${data.token}`,
+                            },
+                          });
                         } catch (error) {
                           console.log("abc");
                         }
@@ -995,9 +1028,9 @@ io.on("connection", (socket) => {
         });
       });
     });
-
     console.log("the end");
   });
+
   socket.on("updatelocation", (data) => {
     console.log(data);
     var newLat = data.lat;
@@ -1091,12 +1124,6 @@ io.on("connection", (socket) => {
       }).then(async (res) => {
         //console.log(res);
         var near = res[0];
-        console.log(
-          near.location.coordinates[0],
-          near.location.coordinates[1],
-          data.long,
-          data.lat
-        );
 
         const time = await DistinationDuration(
           near.location.coordinates[0],
@@ -1123,6 +1150,7 @@ io.on("connection", (socket) => {
               : parseInt(time[0].duration.value / 60),
         };
         let user_id = users.get(data.userid);
+        // console.log(user_id);
         io.to(user_id).emit("getavailable", data1);
       });
       const fun = () => {
@@ -1184,6 +1212,7 @@ io.on("connection", (socket) => {
             userinterval.get(data.userid) == id
           ) {
             let user_id = users.get(data.userid);
+            //console.log(user_id);
             io.to(user_id).emit("getavailable", data1);
           }
         });
