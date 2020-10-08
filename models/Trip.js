@@ -71,6 +71,9 @@ const tripSchema = mongoose.Schema({
   tripDrivers: {
     type: [tripDriversSchema],
   },
+  cancelReasonID: {
+    type: Number,
+  },
 });
 
 const Trip = mongoose.model("Trip", tripSchema);

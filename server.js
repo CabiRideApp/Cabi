@@ -348,7 +348,7 @@ const notification_options = {
 io.on("connection", (socket) => {
   console.log("a user connected");
 
-  socket.on("newTrip", (data) => {
+  socket.on("newTrip", async (data) => {
     const registrationToken = data.registrationToken;
     const options = notification_options;
     var userID = data.userId;
@@ -363,7 +363,7 @@ io.on("connection", (socket) => {
             type: "Point",
             coordinates: [pickupLat, pickupLng],
           },
-          $maxDistance: 5000,
+          //maxDistance: 5000,
         },
       },
       isBusy: false,
@@ -371,10 +371,10 @@ io.on("connection", (socket) => {
       isDeleted: false,
       categoryCarTypeID: data.categoryCarTypeID,
     }).then((drivers) => {
-      console.log(drivers);
+      console.log(drivers, "drivers");
       ConstraintsM.findOne({
         name: "next",
-      }).then((val) => {
+      }).then(async (val) => {
         var Trip_ID = val.tripID;
         console.log(val, Trip_ID);
         ConstraintsM.update(
@@ -386,7 +386,7 @@ io.on("connection", (socket) => {
               tripID: Trip_ID + 1,
             },
           }
-        ).then(() => {
+        ).then(async () => {
           console.log("get drivers");
           var dr = [];
           const trip = new TripM({
@@ -398,10 +398,18 @@ io.on("connection", (socket) => {
             dropoffAddress: data.pickAddress,
             promoCode: data.promoCode,
             categoryCarTypeID: data.categoryCarTypeID,
+            cancelReasonID: data.cancelReasonID,
             tripID: Trip_ID,
             tripStatusId: 2,
             tripDrivers: [],
           });
+          const driverTime = await DistinationDuration(
+            pickupLat,
+            pickupLng,
+            dropoffLng,
+            dropoffLat
+          );
+          console.log(driverTime, "driverTime");
           var from_to = {
             pickupLat: pickupLat,
             pickupLng: pickupLng,
@@ -411,248 +419,273 @@ io.on("connection", (socket) => {
             dropoffAddress: data.pickAddress,
             userId: userID,
             tripID: Trip_ID,
+            driverTime: parseInt(driverTime[0].duration.value / 60),
           };
 
           if (drivers.length > 0) {
-            admin
-              .messaging()
-              .sendToDevice(
-                users.get(drivers[0].driverID),
-                from_to,
-                notification_options
-              )
-              .on("driverRespond", (data) => {
-                requestStatus = data.requestStatus;
-                dr.push({
-                  driverID: drivers[0].driverID,
-                  requestStatus: requestStatus,
-                  location: drivers[0].location,
-                  actionDate: Date.now(),
-                });
-                if (data.requestStatus === 1) {
-                  admin
-                    .messaging()
-                    .sendToDevice(
-                      data.registrationToken,
-                      {
-                        message: "تم قبول رحلتك",
-                        approved: true,
-                        driver: dr[0],
-                      },
-                      notification_options
-                    )
-                    .then(() => {
-                      const data = {
-                        status:
-                          dr[0].isOnline === true && dr[0].isBusy == false
-                            ? 1
-                            : dr[0].isOnline == true && dr[0].isBusy == true
-                            ? 2
-                            : dr[0].isOnline == false
-                            ? 3
-                            : 0,
-                        driverID: dr[0].driverID,
-                        location: dr[0].location,
-                        categoryCarTypeID: dr[0].categoryCarTypeID,
-                        phoneNumber: dr[0].phoneNumber,
-                        idNo: dr[0].idNo,
-                        driverNameAr: dr[0].driverNameAr,
-                        driverNameEn: dr[0].driverNameEn,
-                        modelNameAr: dr[0].modelNameAr,
-                        modelNameEn: dr[0].modelNameEn,
-                        colorNameAr: dr[0].colorNameAr,
-                        colorNameEn: dr[0].colorNameEn,
-                        carImage: dr[0].carImage,
-                        driverImage: dr[0].driverImage,
-                        updateLocationDate: dr[0].updateLocationDate,
-                        trip: dr[0].isBusy ? dr[0].busyTrip : "",
-                      };
-                      console.log(data);
-                      admins.forEach((admin) => {
-                        io.to(admin).emit("trackAdmin", data);
-                      });
-                    })
-                    .catch((error) => {
-                      console.log(error);
+            var reachTime = await DistinationDuration(
+              pickupLat,
+              pickupLng,
+              drivers[0].location.coordinates[1],
+              drivers[0].location.coordinates[0]
+            );
+            if (drivers.length > 1)
+              var reachTime1 = await DistinationDuration(
+                pickupLat,
+                pickupLng,
+                drivers[1].location.coordinates[1],
+                drivers[1].location.coordinates[0]
+              );
+            if (drivers.length > 2)
+              var reachTime2 = await DistinationDuration(
+                pickupLat,
+                pickupLng,
+                drivers[2].location.coordinates[1],
+                drivers[2].location.coordinates[0]
+              );
+            console.log(reachTime, "reachTime");
+
+            from_to.reachTime = parseInt(reachTime[0].duration.value / 60);
+
+            try {
+              console.log("begin");
+              admin
+                .messaging()
+                .sendToDevice(drivers[0].tokenID, from_to, notification_options)
+                .then(() => {
+                  console.log("response");
+                  var distance = 20;
+                  var now = 0;
+                  var x = setInterval(function () {
+                    now++;
+                    socket.once("driverRespond", (data2) => {
+                      clearInterval(x);
+                      socket
+                        .to(users.get(drivers[0].driverID))
+                        .emit("driverRespond", data2);
                     });
-                  ////// save trip
-                  try {
-                    trip.tripDrivers = dr;
-                    DriverM.update(
-                      {
-                        driverID: drivers[0].driverID,
-                      },
-                      {
-                        $set: {
-                          isBusy: true,
-                          busyTrip: from_to,
-                        },
+                    socket.once("cancel", (data3) => {
+                      try {
+                        admin.messaging().sendToDevice(
+                          drivers[0].tokenID,
+                          {
+                            data: {
+                              message: "trip canceled",
+                            },
+                          },
+                          notification_options
+                        );
+                      } catch (error) {
+                        console.log("error");
                       }
-                    ).then(() => {
-                      const savedTrip = trip.save();
+                      clearInterval(x);
                     });
-                    savedTrip.then((saved) => {
-                      axios({
-                        method: "post",
-                        url: "https://devmachine.taketosa.com/api/Trip/NewTrip",
-                        data: saved,
-                        headers: {
-                          Authorization: `Bearer ${data.token}`,
+                    if (now === distance) {
+                      clearInterval(x);
+                      console.log("clear interval");
+                      socket
+                        .to(users.get(drivers[0].driverID))
+                        .emit("driverRespond", {requestStatus: 3});
+                    }
+                  }, 1000);
+                })
+                .then("driverRespond", async (data1) => {
+                  requestStatus = data1.requestStatus;
+                  dr.push({
+                    driverID: drivers[0].driverID,
+                    requestStatus: requestStatus,
+                    location: drivers[0].location,
+                    actionDate: Date.now(),
+                  });
+
+                  if (data1.requestStatus === 1) {
+                    admin
+                      .messaging()
+                      .sendToDevice(
+                        data.registrationToken,
+                        {
+                          data: {
+                            message: "تم قبول رحلتك",
+                            approved: "" + true,
+                            phoneNumber: "" + dr[0].phoneNumber,
+                            idNo: "" + dr[0].idNo,
+                            driverNameAr: dr[0].driverNameAr,
+                            driverNameEn: dr[0].driverNameEn,
+                            modelNameAr: dr[0].modelNameAr,
+                            modelNameEn: dr[0].modelNameEn,
+                            colorNameAr: dr[0].colorNameAr,
+                            colorNameEn: dr[0].colorNameEn,
+                          },
                         },
+                        notification_options
+                      )
+                      .then(async () => {
+                        const data = {
+                          status:
+                            dr[0].isOnline === true && dr[0].isBusy == false
+                              ? 1
+                              : dr[0].isOnline == true && dr[0].isBusy == true
+                              ? 2
+                              : dr[0].isOnline == false
+                              ? 3
+                              : 0,
+                          driverID: dr[0].driverID,
+                          location: dr[0].location,
+                          categoryCarTypeID: dr[0].categoryCarTypeID,
+                          phoneNumber: dr[0].phoneNumber,
+                          idNo: dr[0].idNo,
+                          driverNameAr: dr[0].driverNameAr,
+                          driverNameEn: dr[0].driverNameEn,
+                          modelNameAr: dr[0].modelNameAr,
+                          modelNameEn: dr[0].modelNameEn,
+                          colorNameAr: dr[0].colorNameAr,
+                          colorNameEn: dr[0].colorNameEn,
+                          carImage: dr[0].carImage,
+                          driverImage: dr[0].driverImage,
+                          updateLocationDate: dr[0].updateLocationDate,
+                          trip: dr[0].isBusy ? dr[0].busyTrip : "",
+                        };
+                        console.log(data);
+                        admins.forEach((admin) => {
+                          io.to(admin).emit("trackAdmin", data);
+                        });
+                      })
+                      .catch((error) => {
+                        console.log(error);
                       });
-                    });
-                  } catch (error) {
-                    console.log(error);
-                  }
-                } else if (drivers.length > 1) {
-                  admin
-                    .messaging()
-                    .sendToDevice(
-                      users.get(drivers[1].driverID),
-                      from_to,
-                      notification_options
-                    )
-                    .on("driverRespond", (data) => {
-                      requestStatus = data.requestStatus;
-                      dr.push({
-                        driverID: drivers[1].driverID,
-                        requestStatus: requestStatus,
-                        location: drivers[1].location,
-                        actionDate: Date.now(),
-                      });
-                      if (data.requestStatus === 1) {
-                        admin
-                          .messaging()
-                          .sendToDevice(
-                            data.registrationToken,
-                            {
-                              message: "تم قبول رحلتك",
-                              approved: true,
-                              driver: dr[1],
-                            },
-                            notification_options
-                          )
-                          .then(() => {
-                            const data = {
-                              status:
-                                dr[1].isOnline === true && dr[1].isBusy == false
-                                  ? 1
-                                  : dr[1].isOnline == true &&
-                                    dr[1].isBusy == true
-                                  ? 2
-                                  : dr[1].isOnline == false
-                                  ? 3
-                                  : 0,
-                              driverID: dr[1].driverID,
-                              location: dr[1].location,
-                              categoryCarTypeID: dr[1].categoryCarTypeID,
-                              phoneNumber: dr[1].phoneNumber,
-                              idNo: dr[1].idNo,
-                              driverNameAr: dr[1].driverNameAr,
-                              driverNameEn: dr[1].driverNameEn,
-                              modelNameAr: dr[1].modelNameAr,
-                              modelNameEn: dr[1].modelNameEn,
-                              colorNameAr: dr[1].colorNameAr,
-                              colorNameEn: dr[1].colorNameEn,
-                              carImage: dr[1].carImage,
-                              driverImage: dr[1].driverImage,
-                              updateLocationDate: dr[1].updateLocationDate,
-                              trip: dr[1].isBusy ? dr[1].busyTrip : "",
-                            };
-                            console.log(data);
-                            admins.forEach((admin) => {
-                              io.to(admin).emit("trackAdmin", data);
-                            });
-                          })
-                          .catch((error) => {
-                            console.log(error);
-                          });
-                        ////// save trip
-                        try {
-                          trip.tripDrivers = dr;
-                          DriverM.update(
-                            {
-                              driverID: drivers[1].driverID,
-                            },
-                            {
-                              $set: {
-                                isBusy: true,
-                                busyTrip: from_to,
-                              },
-                            }
-                          ).then(() => {
-                            const savedTrip = trip.save();
-                          });
-                          savedTrip.then((saved) => {
-                            axios({
-                              method: "post",
-                              url:
-                                "https://devmachine.taketosa.com/api/Trip/NewTrip",
-                              data: saved,
-                              headers: {
-                                Authorization: `Bearer ${data.token}`,
-                              },
-                            });
-                          });
-                        } catch (error) {
-                          console.log(error);
+                    ////// save trip
+                    try {
+                      trip.tripDrivers = dr;
+                      DriverM.update(
+                        {
+                          driverID: drivers[0].driverID,
+                        },
+                        {
+                          $set: {
+                            isBusy: true,
+                            busyTrip: from_to,
+                          },
                         }
-                      } else if (drivers.length > 2) {
-                        admin
-                          .messaging()
-                          .sendToDevice(
-                            users.get(drivers[2].driverID),
-                            from_to,
-                            notification_options
-                          )
-                          .on("driverRespond", (data) => {
-                            requestStatus = data.requestStatus;
-                            dr.push({
-                              driverID: drivers[2].driverID,
-                              requestStatus: requestStatus,
-                              location: drivers[1].location,
-                              actionDate: Date.now(),
-                            });
+                      ).then(() => {
+                        const savedTrip = trip.save();
+                      });
+                      savedTrip.then((saved) => {
+                        try {
+                          // axios({
+                          //   method: "post",
+                          //   url: "https://devmachine.taketosa.com/api/Trip/NewTrip",
+                          //   data: saved,
+                          //   headers: {
+                          //     Authorization: `Bearer ${data.token}`,
+                          //   },
+                          // });
+                        } catch (erro) {
+                          console.log("abs");
+                        }
+                      });
+                    } catch (error) {
+                      console.log(error);
+                    }
+                  } else if (drivers.length > 1) {
+                    from_to.reachTime = parseInt(
+                      reachTime1[0].duration.value / 60
+                    );
+                    admin
+                      .messaging()
+                      .sendToDevice(
+                        drivers[1].tokenID,
+                        {
+                          data: {
+                            message: "trip canceled",
+                          },
+                        },
+                        notification_options
+                      )
+                      .then(() => {
+                        var distance = 20;
+                        var now = 0;
+                        var x = setInterval(function () {
+                          now++;
+                          socket.once("driverRespond", (data2) => {
+                            clearInterval(x);
+                            socket
+                              .to(users.get(drivers[1].driverID))
+                              .emit("driverRespond", data2);
                           });
-                        if (data.requestStatus === 1) {
+                          socket.once("cancel", (data3) => {
+                            clearInterval(x);
+                            admin
+                              .messaging()
+                              .sendToDevice(
+                                users.get(drivers[1].tokenID),
+                                {msg: "cancel request"},
+                                notification_options
+                              );
+                          });
+                          if (now === distance) {
+                            clearInterval(x);
+                            socket
+                              .to(users.get(drivers[1].driverID))
+                              .emit("driverRespond", {requestStatus: 3});
+                          }
+                        }, 1000);
+                      })
+                      .on("driverRespond", (data1) => {
+                        requestStatus = data1.requestStatus;
+                        dr.push({
+                          driverID: drivers[1].driverID,
+                          requestStatus: requestStatus,
+                          location: drivers[1].location,
+                          actionDate: Date.now(),
+                        });
+                        if (data1.requestStatus === 1) {
                           admin
                             .messaging()
                             .sendToDevice(
                               data.registrationToken,
                               {
-                                message: "تم قبول رحلتك",
-                                approved: true,
-                                driver: dr[2],
+                                data: {
+                                  message: "تم قبول رحلتك",
+                                  approved: "" + true,
+                                  phoneNumber: "" + dr[1].phoneNumber,
+                                  idNo: "" + dr[1].idNo,
+                                  driverNameAr: dr[1].driverNameAr,
+                                  driverNameEn: dr[1].driverNameEn,
+                                  modelNameAr: dr[1].modelNameAr,
+                                  modelNameEn: dr[1].modelNameEn,
+                                  colorNameAr: dr[1].colorNameAr,
+                                  colorNameEn: dr[1].colorNameEn,
+                                },
                               },
                               notification_options
                             )
                             .then(() => {
                               const data = {
                                 status:
-                                  dr[2].isOnline === true &&
-                                  dr[2].isBusy == false
+                                  dr[1].isOnline === true &&
+                                  dr[1].isBusy == false
                                     ? 1
-                                    : dr[2].isOnline == true &&
-                                      dr[2].isBusy == true
+                                    : dr[1].isOnline == true &&
+                                      dr[1].isBusy == true
                                     ? 2
-                                    : dr[2].isOnline == false
+                                    : dr[1].isOnline == false
                                     ? 3
                                     : 0,
-                                driverID: dr[2].driverID,
-                                location: dr[2].location,
-                                categoryCarTypeID: dr[2].categoryCarTypeID,
-                                phoneNumber: dr[2].phoneNumber,
-                                idNo: dr[2].idNo,
-                                driverNameAr: dr[2].driverNameAr,
-                                driverNameEn: dr[2].driverNameEn,
-                                modelNameAr: dr[2].modelNameAr,
-                                modelNameEn: dr[2].modelNameEn,
-                                colorNameAr: dr[2].colorNameAr,
-                                colorNameEn: dr[2].colorNameEn,
-                                carImage: dr[2].carImage,
-                                driverImage: dr[2].driverImage,
-                                updateLocationDate: dr[2].updateLocationDate,
-                                trip: dr[2].isBusy ? dr[2].busyTrip : "",
+                                driverID: dr[1].driverID,
+                                location: dr[1].location,
+                                categoryCarTypeID: dr[1].categoryCarTypeID,
+                                phoneNumber: dr[1].phoneNumber,
+                                idNo: dr[1].idNo,
+                                driverNameAr: dr[1].driverNameAr,
+                                driverNameEn: dr[1].driverNameEn,
+                                modelNameAr: dr[1].modelNameAr,
+                                modelNameEn: dr[1].modelNameEn,
+                                colorNameAr: dr[1].colorNameAr,
+                                colorNameEn: dr[1].colorNameEn,
+                                carImage: dr[1].carImage,
+                                driverImage: dr[1].driverImage,
+                                updateLocationDate: dr[1].updateLocationDate,
+                                trip: dr[1].isBusy ? dr[1].busyTrip : "",
                               };
                               console.log(data);
                               admins.forEach((admin) => {
@@ -679,138 +712,292 @@ io.on("connection", (socket) => {
                               const savedTrip = trip.save();
                             });
                             savedTrip.then((saved) => {
-                              axios({
-                                method: "post",
-                                url:
-                                  "https://devmachine.taketosa.com/api/Trip/NewTrip",
-                                data: saved,
-                                headers: {
-                                  Authorization: `Bearer ${data.token}`,
-                                },
-                              });
+                              try {
+                                // axios({
+                                //   method: "post",
+                                //   url:
+                                //     "https://devmachine.taketosa.com/api/Trip/NewTrip",
+                                //   data: saved,
+                                //   headers: {
+                                //     Authorization: `Bearer ${data.token}`,
+                                //   },
+                                // });
+                              } catch (error) {
+                                console.log("abs");
+                              }
                             });
                           } catch (error) {
                             console.log(error);
                           }
-                        } else {
+                        } else if (drivers.length > 2) {
+                          from_to.reachTime = parseInt(
+                            reachTime2[0].duration.value / 60
+                          );
                           admin
                             .messaging()
                             .sendToDevice(
-                              data.registrationToken,
+                              drivers[2].tokenID,
                               {
-                                message: "لا يوجد سائق في منطقتك الحالية",
-                                approved: false,
+                                data: {
+                                  message: "trip canceled",
+                                },
                               },
                               notification_options
                             )
-                            .then((response) => {
-                              res
-                                .status(200)
-                                .send("Notification sent successfully");
+                            .then(() => {
+                              var distance = 20;
+                              var now = 0;
+                              var x = setInterval(function () {
+                                now++;
+                                socket.once("driverRespond", (data2) => {
+                                  clearInterval(x);
+                                  socket
+                                    .to(users.get(drivers[2].driverID))
+                                    .emit("driverRespond", data2);
+                                });
+                                socket.once("cancel", (data3) => {
+                                  clearInterval(x);
+                                  admin
+                                    .messaging()
+                                    .sendToDevice(
+                                      users.get(drivers[2].tokenID),
+                                      {msg: "cancel request"},
+                                      notification_options
+                                    );
+                                });
+                                if (now === distance) {
+                                  clearInterval(x);
+                                  socket
+                                    .to(users.get(drivers[2].driverID))
+                                    .emit("driverRespond", {requestStatus: 3});
+                                }
+                              }, 1000);
                             })
-                            .catch((error) => {
-                              console.log(error);
+                            .on("driverRespond", (data1) => {
+                              requestStatus = data1.requestStatus;
+                              dr.push({
+                                driverID: drivers[2].driverID,
+                                requestStatus: requestStatus,
+                                location: drivers[1].location,
+                                actionDate: Date.now(),
+                              });
                             });
+                          if (data1.requestStatus === 1) {
+                            admin
+                              .messaging()
+                              .sendToDevice(
+                                data.registrationToken,
+                                {
+                                  data: {
+                                    message: "تم قبول رحلتك",
+                                    approved: "" + true,
+                                    phoneNumber: "" + dr[2].phoneNumber,
+                                    idNo: "" + dr[2].idNo,
+                                    driverNameAr: dr[2].driverNameAr,
+                                    driverNameEn: dr[2].driverNameEn,
+                                    modelNameAr: dr[2].modelNameAr,
+                                    modelNameEn: dr[2].modelNameEn,
+                                    colorNameAr: dr[2].colorNameAr,
+                                    colorNameEn: dr[2].colorNameEn,
+                                  },
+                                },
+                                notification_options
+                              )
+                              .then(() => {
+                                const data = {
+                                  status:
+                                    dr[2].isOnline === true &&
+                                    dr[2].isBusy == false
+                                      ? 1
+                                      : dr[2].isOnline == true &&
+                                        dr[2].isBusy == true
+                                      ? 2
+                                      : dr[2].isOnline == false
+                                      ? 3
+                                      : 0,
+                                  driverID: dr[2].driverID,
+                                  location: dr[2].location,
+                                  categoryCarTypeID: dr[2].categoryCarTypeID,
+                                  phoneNumber: dr[2].phoneNumber,
+                                  idNo: dr[2].idNo,
+                                  driverNameAr: dr[2].driverNameAr,
+                                  driverNameEn: dr[2].driverNameEn,
+                                  modelNameAr: dr[2].modelNameAr,
+                                  modelNameEn: dr[2].modelNameEn,
+                                  colorNameAr: dr[2].colorNameAr,
+                                  colorNameEn: dr[2].colorNameEn,
+                                  carImage: dr[2].carImage,
+                                  driverImage: dr[2].driverImage,
+                                  updateLocationDate: dr[2].updateLocationDate,
+                                  trip: dr[2].isBusy ? dr[2].busyTrip : "",
+                                };
+                                console.log(data);
+                                admins.forEach((admin) => {
+                                  io.to(admin).emit("trackAdmin", data);
+                                });
+                              })
+                              .catch((error) => {
+                                console.log(error);
+                              });
+                            ////// save trip
+                            try {
+                              trip.tripDrivers = dr;
+                              DriverM.update(
+                                {
+                                  driverID: drivers[1].driverID,
+                                },
+                                {
+                                  $set: {
+                                    isBusy: true,
+                                    busyTrip: from_to,
+                                  },
+                                }
+                              ).then(() => {
+                                const savedTrip = trip.save();
+                              });
+                              savedTrip.then((saved) => {
+                                try {
+                                  // axios({
+                                  //   method: "post",
+                                  //   url:
+                                  //     "https://devmachine.taketosa.com/api/Trip/NewTrip",
+                                  //   data: saved,
+                                  //   headers: {
+                                  //     Authorization: `Bearer ${data.token}`,
+                                  //   },
+                                  // });
+                                } catch (error) {
+                                  console.log("abc");
+                                }
+                              });
+                            } catch (error) {
+                              console.log(error);
+                            }
+                          } else {
+                            try {
+                              admin.messaging().sendToDevice(
+                                data.registrationToken,
+                                {
+                                  data: {
+                                    message: "لا يوجد سائق في منطقتك الحالية",
+                                    approved: "" + false,
+                                  },
+                                },
+                                notification_options
+                              );
+                            } catch (error) {
+                              console.log("abc");
+                            }
+                            ///// save trip
+                            try {
+                              trip.tripDrivers = dr;
+                              const savedTrip = trip.save();
+                              savedTrip.then((saved) => {
+                                try {
+                                  // axios({
+                                  //   method: "post",
+                                  //   url:
+                                  //     "https://devmachine.taketosa.com/api/Trip/NewTrip",
+                                  //   data: saved,
+                                  //   headers: {
+                                  //     Authorization: `Bearer ${data.token}`,
+                                  //   },
+                                  // });
+                                } catch (error) {
+                                  console.log("abc");
+                                }
+                              });
+                            } catch (error) {
+                              console.log(error);
+                            }
+                          }
+                        } else {
+                          try {
+                            admin.messaging().sendToDevice(
+                              data.registrationToken,
+                              {
+                                data: {
+                                  message: "لا يوجد سائق في منطقتك الحالية",
+                                  approved: "" + false,
+                                },
+                              },
+                              notification_options
+                            );
+                          } catch (error) {
+                            console.log("abc");
+                          }
                           ///// save trip
                           try {
                             trip.tripDrivers = dr;
                             const savedTrip = trip.save();
                             savedTrip.then((saved) => {
-                              axios({
-                                method: "post",
-                                url:
-                                  "https://devmachine.taketosa.com/api/Trip/NewTrip",
-                                data: saved,
-                                headers: {
-                                  Authorization: `Bearer ${data.token}`,
-                                },
-                              });
+                              try {
+                                // axios({
+                                //   method: "post",
+                                //   url:
+                                //     "https://devmachine.taketosa.com/api/Trip/NewTrip",
+                                //   data: saved,
+                                //   headers: {
+                                //     Authorization: `Bearer ${data.token}`,
+                                //   },
+                                // });
+                              } catch (error) {
+                                console.log("abc");
+                              }
                             });
                           } catch (error) {
                             console.log(error);
                           }
                         }
-                      } else {
-                        admin
-                          .messaging()
-                          .sendToDevice(
-                            data.registrationToken,
-                            {
-                              message: "لا يوجد سائق في منطقتك الحالية",
-                              approved: false,
-                            },
-                            notification_options
-                          )
-                          .then((response) => {
-                            res
-                              .status(200)
-                              .send("Notification sent successfully");
-                          })
-                          .catch((error) => {
-                            console.log(error);
-                          });
-                        ///// save trip
-                        try {
-                          trip.tripDrivers = dr;
-                          const savedTrip = trip.save();
-                          savedTrip.then((saved) => {
-                            axios({
-                              method: "post",
-                              url:
-                                "https://devmachine.taketosa.com/api/Trip/NewTrip",
-                              data: saved,
-                              headers: {
-                                Authorization: `Bearer ${data.token}`,
-                              },
-                            });
-                          });
-                        } catch (error) {
-                          console.log(error);
-                        }
-                      }
-                    });
-                } else {
-                  admin
-                    .messaging()
-                    .sendToDevice(
-                      data.registrationToken,
-                      {
-                        message: "لا يوجد سائق في منطقتك الحالية",
-                        approved: false,
-                      },
-                      notification_options
-                    )
-                    .then((response) => {
-                      res.status(200).send("Notification sent successfully");
-                    })
-                    .catch((error) => {
-                      console.log(error);
-                    });
-                  ///// save trip
-                  try {
-                    trip.tripDrivers = dr;
-                    const savedTrip = trip.save();
-                    savedTrip.then((saved) => {
-                      axios({
-                        method: "post",
-                        url: "https://devmachine.taketosa.com/api/Trip/NewTrip",
-                        data: saved,
-                        headers: {
-                          Authorization: `Bearer ${data.token}`,
-                        },
                       });
-                    });
-                  } catch (error) {
-                    console.log(error);
+                  } else {
+                    try {
+                      admin.messaging().sendToDevice(
+                        data.registrationToken,
+                        {
+                          data: {
+                            message: "لا يوجد سائق في منطقتك الحالية",
+                            approved: "" + false,
+                          },
+                        },
+                        notification_options
+                      );
+                    } catch (error) {
+                      console.log("abc");
+                    }
+                    ///// save trip
+                    try {
+                      trip.tripDrivers = dr;
+                      const savedTrip = trip.save();
+                      savedTrip.then((saved) => {
+                        try {
+                          // axios({
+                          //   method: "post",
+                          //   url: "https://devmachine.taketosa.com/api/Trip/NewTrip",
+                          //   data: saved,
+                          //   headers: {
+                          //     Authorization: `Bearer ${data.token}`,
+                          //   },
+                          // });
+                        } catch (error) {
+                          console.log("abc");
+                        }
+                      });
+                    } catch (error) {
+                      console.log(error);
+                    }
                   }
-                }
-              });
+                });
+            } catch (error) {
+              console.log("asd");
+            }
           }
         });
       });
     });
-  });
 
+    console.log("the end");
+  });
   socket.on("updatelocation", (data) => {
     console.log(data);
     var newLat = data.lat;
@@ -1002,24 +1189,6 @@ io.on("connection", (socket) => {
         });
       };
       var interval = setInterval(fun, 20000);
-    } catch (err) {
-      console.log(err);
-    }
-  });
-
-  socket.on("trackdriverlocation", (data) => {
-    try {
-      DriverM.findOne({
-        isBusy: false,
-        isOnline: true,
-        isDeleted: false,
-        driverID: data.driverID,
-      }).then((res) => {
-        console.log(res.location.coordinates);
-
-        let user_id = users.get(data.userid);
-        io.to(user_id).emit("trackdriverlocation", res.location);
-      });
     } catch (err) {
       console.log(err);
     }
@@ -1349,7 +1518,7 @@ io.on("connection", (socket) => {
                     };
                     // console.log(data1);
                     var user_id = users.get(data.userId);
-                    io.to(user_id).emit("listCategory", data1);
+                    io.to(user_id).emit("trackCategory", data1);
                   });
                 });
               }
