@@ -456,6 +456,10 @@ io.on("connection", (socket) => {
                 .messaging()
                 .sendToDevice(drivers[0].tokenID, from_to, notification_options)
                 .then(() => {
+                  io.to(users.get(drivers[0].driverID)).emit(
+                    "tripInfo",
+                    from_to
+                  );
                   console.log("response");
                   var distance = 20;
                   var now = 0;
@@ -579,6 +583,24 @@ io.on("connection", (socket) => {
                           io.to(admin).emit("trackAdmin", data);
                         });
                       })
+                      .then(() => {
+                        var tr = setInterval(function () {
+                          DriverM.find({driverID: dr[0].driverID}).then(
+                            (driver) => {
+                              io.to(users.get(userID)).emit(
+                                "trackDriverLocation",
+                                driver.location
+                              );
+                              if (
+                                driver.location.coordinates[0] === pickupLat &&
+                                driver.location.coordinates[1] === pickupLng
+                              ) {
+                                clearInterval(tr);
+                              }
+                            }
+                          );
+                        }, 1000);
+                      })
                       .catch((error) => {
                         console.log(error);
                       });
@@ -632,6 +654,10 @@ io.on("connection", (socket) => {
                         notification_options
                       )
                       .then(() => {
+                        io.to(users.get(drivers[1].driverID)).emit(
+                          "tripInfo",
+                          from_to
+                        );
                         var distance = 20;
                         var now = 0;
                         var x = setInterval(function () {
@@ -723,6 +749,26 @@ io.on("connection", (socket) => {
                                 io.to(admin).emit("trackAdmin", data);
                               });
                             })
+                            .then(() => {
+                              var tr = setInterval(function () {
+                                DriverM.find({driverID: dr[1].driverID}).then(
+                                  (driver) => {
+                                    io.to(users.get(userID)).emit(
+                                      "trackDriverLocation",
+                                      driver.location
+                                    );
+                                    if (
+                                      driver.location.coordinates[0] ===
+                                        pickupLat &&
+                                      driver.location.coordinates[1] ===
+                                        pickupLng
+                                    ) {
+                                      clearInterval(tr);
+                                    }
+                                  }
+                                );
+                              }, 1000);
+                            })
                             .catch((error) => {
                               console.log(error);
                             });
@@ -776,6 +822,10 @@ io.on("connection", (socket) => {
                               notification_options
                             )
                             .then(() => {
+                              io.to(users.get(drivers[2].driverID)).emit(
+                                "tripInfo",
+                                from_to
+                              );
                               var distance = 20;
                               var now = 0;
                               var x = setInterval(function () {
@@ -868,6 +918,26 @@ io.on("connection", (socket) => {
                                   io.to(admin).emit("trackAdmin", data);
                                 });
                               })
+                              .then(() => {
+                                var tr = setInterval(function () {
+                                  DriverM.find({driverID: dr[2].driverID}).then(
+                                    (driver) => {
+                                      io.to(users.get(userID)).emit(
+                                        "trackDriverLocation",
+                                        driver.location
+                                      );
+                                      if (
+                                        driver.location.coordinates[0] ===
+                                          pickupLat &&
+                                        driver.location.coordinates[1] ===
+                                          pickupLng
+                                      ) {
+                                        clearInterval(tr);
+                                      }
+                                    }
+                                  );
+                                }, 1000);
+                              })
                               .catch((error) => {
                                 console.log(error);
                               });
@@ -876,7 +946,7 @@ io.on("connection", (socket) => {
                               trip.tripDrivers = dr;
                               DriverM.update(
                                 {
-                                  driverID: drivers[1].driverID,
+                                  driverID: drivers[2].driverID,
                                 },
                                 {
                                   $set: {
