@@ -1712,14 +1712,6 @@ io.on("connection", (socket) => {
       if (data.lat == 0) {
         DriverM.find({
           isDeleted: false,
-          location: {
-            $near: {
-              $geometry: {
-                type: "Point",
-                coordinates: [data.lat, data.lng],
-              },
-            },
-          },
         }).then(async (res) => {
           var list = [];
           res.map((driver) => {
@@ -1766,8 +1758,8 @@ io.on("connection", (socket) => {
                 type: "Point",
                 coordinates: [data.lat, data.lng],
               },
+              $maxDistance: data.maxDistance,
             },
-            $maxDistance: data.maxDistance,
           },
         }).then(async (res) => {
           var list = [];
@@ -1849,8 +1841,8 @@ io.on("connection", (socket) => {
                 type: "Point",
                 coordinates: [data.lat, data.lng],
               },
+              $maxDistance: data.maxDistance,
             },
-            $maxDistance: data.maxDistance,
           },
         }).then(async (busy) => {
           DriverM.find({
@@ -1861,8 +1853,8 @@ io.on("connection", (socket) => {
                   type: "Point",
                   coordinates: [data.lat, data.lng],
                 },
+                $maxDistance: data.maxDistance,
               },
-              $maxDistance: data.maxDistance,
             },
           }).then(async (online) => {
             DriverM.find({
@@ -1873,8 +1865,8 @@ io.on("connection", (socket) => {
                     type: "Point",
                     coordinates: [data.lat, data.lng],
                   },
+                  $maxDistance: data.maxDistance,
                 },
-                $maxDistance: data.maxDistance,
               },
             }).then((offline) => {
               const data = {
