@@ -23,6 +23,7 @@ var google_Key = "AIzaSyCKW4oeH-_tRtLAT_sWK9G7wbgEOpxWAzI";
 const app = express();
 app.use(cors());
 app.use(express.json());
+
 var users = new Map();
 var admins = new Map();
 var userinterval = new Map();
@@ -1708,54 +1709,104 @@ io.on("connection", (socket) => {
   socket.on("AdminGetDrivers", (data) => {
     //console.log(data);
     try {
-      DriverM.find({
-        isDeleted: false,
-        location: {
-          $near: {
-            $geometry: {
-              type: "Point",
-              coordinates: [data.lat, data.lng],
+      if (data.lat == 0) {
+        DriverM.find({
+          isDeleted: false,
+          location: {
+            $near: {
+              $geometry: {
+                type: "Point",
+                coordinates: [data.lat, data.lng],
+              },
             },
           },
-          //$maxDistance: data.maxDistance,
-        },
-      }).then(async (res) => {
-        var list = [];
-        res.map((driver) => {
-          const temp = {
-            status:
-              driver.isOnline === true && driver.isBusy == false
-                ? 1
-                : driver.isOnline == true && driver.isBusy == true
-                ? 2
-                : driver.isOnline == false
-                ? 3
-                : 0,
-            driverID: driver.driverID,
-            location: driver.location,
-            categoryCarTypeID: driver.categoryCarTypeID,
-            phoneNumber: driver.phoneNumber,
-            idNo: driver.idNo,
-            driverNameAr: driver.driverNameAr,
-            driverNameEn: driver.driverNameEn,
-            modelNameAr: driver.modelNameAr,
-            modelNameEn: driver.modelNameEn,
-            colorNameAr: driver.colorNameAr,
-            colorNameEn: driver.colorNameEn,
-            carImage: driver.carImage,
-            driverImage: driver.driverImage,
-            updateLocationDate: driver.updateLocationDate,
-            trip: driver.isBusy ? driver.busyTrip : "",
-          };
-          list.push(temp);
-        });
-        // console.log(list);
+        }).then(async (res) => {
+          var list = [];
+          res.map((driver) => {
+            const temp = {
+              status:
+                driver.isOnline === true && driver.isBusy == false
+                  ? 1
+                  : driver.isOnline == true && driver.isBusy == true
+                  ? 2
+                  : driver.isOnline == false
+                  ? 3
+                  : 0,
+              driverID: driver.driverID,
+              location: driver.location,
+              categoryCarTypeID: driver.categoryCarTypeID,
+              phoneNumber: driver.phoneNumber,
+              idNo: driver.idNo,
+              driverNameAr: driver.driverNameAr,
+              driverNameEn: driver.driverNameEn,
+              modelNameAr: driver.modelNameAr,
+              modelNameEn: driver.modelNameEn,
+              colorNameAr: driver.colorNameAr,
+              colorNameEn: driver.colorNameEn,
+              carImage: driver.carImage,
+              driverImage: driver.driverImage,
+              updateLocationDate: driver.updateLocationDate,
+              trip: driver.isBusy ? driver.busyTrip : "",
+            };
+            list.push(temp);
+          });
+          // console.log(list);
 
-        admins.forEach((admin) => {
-          // console.log(admin);
-          io.to(admin).emit("AdminGetDrivers", list);
+          admins.forEach((admin) => {
+            // console.log(admin);
+            io.to(admin).emit("AdminGetDrivers", list);
+          });
         });
-      });
+      } else {
+        DriverM.find({
+          isDeleted: false,
+          location: {
+            $near: {
+              $geometry: {
+                type: "Point",
+                coordinates: [data.lat, data.lng],
+              },
+            },
+            $maxDistance: data.maxDistance,
+          },
+        }).then(async (res) => {
+          var list = [];
+          res.map((driver) => {
+            const temp = {
+              status:
+                driver.isOnline === true && driver.isBusy == false
+                  ? 1
+                  : driver.isOnline == true && driver.isBusy == true
+                  ? 2
+                  : driver.isOnline == false
+                  ? 3
+                  : 0,
+              driverID: driver.driverID,
+              location: driver.location,
+              categoryCarTypeID: driver.categoryCarTypeID,
+              phoneNumber: driver.phoneNumber,
+              idNo: driver.idNo,
+              driverNameAr: driver.driverNameAr,
+              driverNameEn: driver.driverNameEn,
+              modelNameAr: driver.modelNameAr,
+              modelNameEn: driver.modelNameEn,
+              colorNameAr: driver.colorNameAr,
+              colorNameEn: driver.colorNameEn,
+              carImage: driver.carImage,
+              driverImage: driver.driverImage,
+              updateLocationDate: driver.updateLocationDate,
+              trip: driver.isBusy ? driver.busyTrip : "",
+            };
+            list.push(temp);
+          });
+          // console.log(list);
+
+          admins.forEach((admin) => {
+            // console.log(admin);
+            io.to(admin).emit("AdminGetDrivers", list);
+          });
+        });
+      }
     } catch (err) {
       console.log(err);
     }
