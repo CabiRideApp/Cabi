@@ -6,32 +6,21 @@
         <title>Map</title>
     </head>
     <body>
-        <h1>lkjlk</h1>
         <script
             src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.4/socket.io.js"> </script>
         <script>
-        var socket = io.connect('http://localhost:5000');
+        var socket = io.connect('http://testportal.taketosa.com:5000');
         userid=0
         socket.emit("join",userid)
         const data={
-       
-                
-            userid:0,
-              long: 31.335392966866493,
-            lat: 30.645845871482095,
+            pickupLng: 31.335392966866493,
+            pickupLat: 30.645845871482095,
             dropoffLng: 31.335392966866593,
             dropoffLat: 30.745845871482085,
-            carCategory:1
-         //  maxDistance:10000
+            categoryCarTypeID:1
         }
-        socket.emit("getavailable",data)
-         socket.on('getavailable', function (data) {
-                console.log(data);
-            }); 
-     /* socket.on('trackAdmin', function (data) {
-        console.log(data);
-    });  */  
-  
+        socket.emit("newTrip",data)
+
     </script>
     </body>
 </html>

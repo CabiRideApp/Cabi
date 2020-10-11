@@ -93,6 +93,7 @@ app.post("/driver/is_Online", async (req, res) => {
         };
         admins.forEach((admin) => {
           io.to(admin).emit("trackAdmin", data);
+          io.to(admin).emit("trackCount");
         });
       });
     }
@@ -137,6 +138,7 @@ app.post("/driver/is_Online", async (req, res) => {
         // console.log(data);
         admins.forEach((admin) => {
           io.to(admin).emit("trackAdmin", data);
+          io.to(admin).emit("trackCount");
         });
       });
     }
@@ -198,6 +200,7 @@ app.post("/driver/is_Busy", async (req, res) => {
         };
         admins.forEach((admin) => {
           io.to(admin).emit("trackAdmin", data);
+          io.to(admin).emit("trackCount");
         });
       });
     }
@@ -241,6 +244,7 @@ app.post("/driver/is_Busy", async (req, res) => {
         };
         admins.forEach((admin) => {
           io.to(admin).emit("trackAdmin", data);
+          io.to(admin).emit("trackCount");
         });
       });
     }
