@@ -9,17 +9,15 @@
         <script
             src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.4/socket.io.js"> </script>
         <script>
-        var socket = io.connect('http://testportal.taketosa.com:5000');
+        var socket = io.connect('http://localhost:5000');
         userid=0
-        socket.emit("join",userid)
+        socket.emit("joinAdmin",userid)
         const data={
-            pickupLng: 31.335392966866493,
-            pickupLat: 30.645845871482095,
-            dropoffLng: 31.335392966866593,
-            dropoffLat: 30.745845871482085,
-            categoryCarTypeID:1
+           lng: 31.23571798231443,
+           lat: 30.044367093804816,
+           maxDistance:790.1836707231585
         }
-        socket.emit("newTrip",data)
+        socket.emit("AdminGetDrivers",data)
 
     </script>
     </body>

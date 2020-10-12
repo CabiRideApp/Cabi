@@ -1795,7 +1795,6 @@ io.on("connection", (socket) => {
             };
             list.push(temp);
           });
-          // console.log(list);
 
           admins.forEach((admin) => {
             // console.log(admin);
@@ -1809,7 +1808,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("AdminGetCount", (data) => {
-    //console.log(data);
+    console.log(data);
     try {
       if (data.lat === 0) {
         DriverM.find({
@@ -1817,6 +1816,7 @@ io.on("connection", (socket) => {
         }).then(async (busy) => {
           DriverM.find({
             isOnline: true,
+            isBusy: false,
           }).then(async (online) => {
             DriverM.find({
               isOnline: false,
@@ -1827,7 +1827,7 @@ io.on("connection", (socket) => {
                 offline: offline.length,
                 total: busy.length + online.length + offline.length,
               };
-              //console.log(data);
+              console.log(data, "dfljklj");
 
               admins.forEach((admin) => {
                 // console.log(admin);
@@ -1851,6 +1851,7 @@ io.on("connection", (socket) => {
         }).then(async (busy) => {
           DriverM.find({
             isOnline: true,
+            isBusy: false,
             location: {
               $near: {
                 $geometry: {
@@ -1879,7 +1880,7 @@ io.on("connection", (socket) => {
                 offline: offline.length,
                 total: busy.length + online.length + offline.length,
               };
-              //console.log(data);
+              console.log(data);
 
               admins.forEach((admin) => {
                 // console.log(admin);
