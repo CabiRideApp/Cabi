@@ -1414,12 +1414,13 @@ io.on("connection", (socket) => {
                 categoryCarTypeID: i,
               }).then(async (driver) => {
                 if (i == 1 && driver == null) {
+                  //console.log(i, driver);
                   let user_id = users.get(data.userid);
                   io.to(user_id).emit("getavailable", {
                     msg: "لا يوجد سائق متاح في منطقتك حالياً",
                   });
                 } else if (driver != null) {
-                  //  console.log(driver);
+                  // console.log(driver);
                   const e = await DistinationDuration(
                     driver.location.coordinates[0],
                     driver.location.coordinates[1],
@@ -1436,7 +1437,7 @@ io.on("connection", (socket) => {
                       discountType,
                       discountValue
                     ).then((cost) => {
-                      //   console.log("cost", i, cost);
+                      //console.log("cost", i, cost);
                       responseArray.push({
                         NameAR: driver.driverNameAr,
                         NameEn: driver.driverNameEn,
