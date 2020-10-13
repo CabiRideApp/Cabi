@@ -13,11 +13,23 @@
         userid=0
         socket.emit("join",userid)
         const data={
+            registrationToken:"123123",
            lng: 31.23571798231443,
            lat: 30.044367093804816,
-           maxDistance:790.1836707231585
+           pickupLat: 30.044367093804816,
+           pickupLng:31.23571798231443,
+            pickAddress: "abc",
+            dropoffLat: 30.044367093804823,
+            dropoffLng: 31.235717982314123,
+            dropoffAddress: "qwe",
+           promoCode:12345,
+           categoryCarTypeID: 1,
+            cancelReasonID: 0,
+            paymentStatusID: 1,
+           token:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiUGFzczE1MzMyMzU4OTIiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9zaWQiOiIxMTAxIiwianRpIjoiOTJmNTBkYmMtNDkyZC00MjlmLTgxZWMtZGMwNDVjYjNkNWM3IiwiZXhwIjoxNjAyNjAyNjgxLCJpc3MiOiJodHRwczovL2Rldm1hY2hpbmUudGFrZXRvc2EuY29tIiwiYXVkIjoiaHR0cHM6Ly9kZXZtYWNoaW5lLnRha2V0b3NhLmNvbSJ9.hcillc32-4xsyP7YrNjxCC9EhbCsCoOdkQKQ2T9Gx-w"
+          , maxDistance:790.1836707231585
         }
-        socket.emit("getAvailable",data)
+        socket.emit("newTrip",data)
 
     </script>
     </body>
