@@ -1357,127 +1357,43 @@ io.on("connection", (socket) => {
     listinterval.set(data.userid, id);
     var discountType;
     var discountValue;
+    if (data.promoCode) {
+      //  console.log(data);
 
-    //  console.log(data);
+      const config = {
+        method: "post",
+        url: `http://devmachine.taketosa.com/api/Trip/CheckPromoCode?promoCode=${data.promoCode}`,
+        headers: {
+          "Content-Type": "application / json",
+          Authorization: "Bearer " + data.token,
+        },
+      };
 
-    const config = {
-      method: "post",
-      url: `http://devmachine.taketosa.com/api/Trip/CheckPromoCode?promoCode=${data.promoCode}`,
-      headers: {
-        "Content-Type": "application / json",
-        Authorization: "Bearer " + data.token,
-      },
-    };
-
-    let promoResponse = await axios(config).then((res) => {
-      console.log(res.data);
-      if ((!res.data.status || !res.data.data.isValid) && data.promoCode) {
-        var user_id = users.get(data.userId);
-        discountType = -1;
-        discountValue = 0;
-        io.to(user_id).emit("promoCode", {
-          messageEn: res.messageEn,
-          messageAr: res.messageAr,
-        });
-      } else {
-        discountType = res.data.data.discountType;
-        discountValue = res.data.data.discountValue;
-      }
-    });
-    // console.log(discountType, discountValue);
-
-    try {
-      const time = await DistinationDuration(
-        data.dropoffLat,
-        data.dropoffLng,
-        data.pickupLng,
-        data.pickupLat
-      ).then(async (time) => {
-        const category = await CategoryFareM.find({}).then(async (res) => {
-          //console.log("tttt", res);
-
-          var responseArray = [];
-          var mainCatTime;
-          for (var i = 1; i <= res.length; i++) {
-            //console.log(i);
-            const temp = await DriverM.findOne({
-              isBusy: false,
-              isOnline: true,
-              isDeleted: false,
-              location: {
-                $near: {
-                  $geometry: {
-                    type: "Point",
-                    coordinates: [data.pickupLat, data.pickupLng],
-                  },
-                  //$maxDistance: 5000,
-                },
-              },
-              categoryCarTypeID: i,
-            }).then(async (driver) => {
-              if (i == 1 && driver == null) {
-                let user_id = users.get(data.userid);
-                io.to(user_id).emit("getavailable", {
-                  msg: "لا يوجد سائق متاح في منطقتك حالياً",
-                });
-              } else if (driver != null) {
-                //  console.log(driver);
-                const e = await DistinationDuration(
-                  driver.location.coordinates[0],
-                  driver.location.coordinates[1],
-                  data.pickupLng,
-                  data.pickupLat
-                ).then(async (driverTime) => {
-                  //  console.log("nm", i, driverTime);
-                  const Cost = await tripCost(
-                    data.pickupLng,
-                    data.pickupLat,
-                    data.dropoffLng,
-                    data.dropoffLat,
-                    driver.categoryCarTypeID,
-                    discountType,
-                    discountValue
-                  ).then((cost) => {
-                    //   console.log("cost", i, cost);
-                    responseArray.push({
-                      NameAR: driver.driverNameAr,
-                      NameEn: driver.driverNameEn,
-                      Photo: driver.driverImage,
-                      Minutes: parseInt(driverTime[0].duration.value / 60),
-                      dest: parseInt(driverTime[0].distance.value / 1000),
-                      Cost: cost,
-                      isMain: res[i - 1].isMain,
-                    });
-                    if (res[i - 1].isMain)
-                      mainCatTime = parseInt(driverTime[0].duration.value / 60);
-                  });
-                });
-              }
-            });
-          }
-
-          var driveTime = driveTimeCalc(
-            parseInt(time[0].duration.value / 60),
-            mainCatTime
-          );
-          const data1 = {
-            categories: responseArray,
-            mainCatTime,
-            driveTime,
-          };
-          //console.log(data1);
+      let promoResponse = await axios(config).then((res) => {
+        console.log(res.data);
+        if ((!res.data.status || !res.data.data.isValid) && data.promoCode) {
           var user_id = users.get(data.userId);
-          io.to(user_id).emit("listCategory", data1);
-        });
-        const fun = () => {
-          if (
-            users.get(data.userid) == undefined ||
-            listinterval.get(data.userid) != id
-          ) {
-            clearInterval(interval);
-            //console.log("kkkkkkkkk");
-          }
-          const category = CategoryFareM.find({}).then(async (res) => {
+          discountType = -1;
+          discountValue = 0;
+          io.to(user_id).emit("promoCode", {
+            messageEn: res.messageEn,
+            messageAr: res.messageAr,
+          });
+        } else {
+          discountType = res.data.data.discountType;
+          discountValue = res.data.data.discountValue;
+        }
+      });
+      // console.log(discountType, discountValue);
+    } else {
+      try {
+        const time = await DistinationDuration(
+          data.dropoffLat,
+          data.dropoffLng,
+          data.pickupLng,
+          data.pickupLat
+        ).then(async (time) => {
+          const category = await CategoryFareM.find({}).then(async (res) => {
             //console.log("tttt", res);
 
             var responseArray = [];
@@ -1551,20 +1467,107 @@ io.on("connection", (socket) => {
               mainCatTime,
               driveTime,
             };
-            console.log(data1);
-            if (
-              users.get(data.userid) != undefined ||
-              listinterval.get(data.userid) == id
-            ) {
-              var user_id = users.get(data.userId);
-              console.log(id);
-              io.to(user_id).emit("listCategory", data1);
-            }
+            //console.log(data1);
+            var user_id = users.get(data.userId);
+            io.to(user_id).emit("listCategory", data1);
           });
-        };
-        var interval = setInterval(fun, 20000);
-      });
-    } catch {}
+          const fun = () => {
+            if (
+              users.get(data.userid) == undefined ||
+              listinterval.get(data.userid) != id
+            ) {
+              clearInterval(interval);
+              //console.log("kkkkkkkkk");
+            }
+            const category = CategoryFareM.find({}).then(async (res) => {
+              //console.log("tttt", res);
+
+              var responseArray = [];
+              var mainCatTime;
+              for (var i = 1; i <= res.length; i++) {
+                //console.log(i);
+                const temp = await DriverM.findOne({
+                  isBusy: false,
+                  isOnline: true,
+                  isDeleted: false,
+                  location: {
+                    $near: {
+                      $geometry: {
+                        type: "Point",
+                        coordinates: [data.pickupLat, data.pickupLng],
+                      },
+                      //$maxDistance: 5000,
+                    },
+                  },
+                  categoryCarTypeID: i,
+                }).then(async (driver) => {
+                  if (i == 1 && driver == null) {
+                    let user_id = users.get(data.userid);
+                    io.to(user_id).emit("getavailable", {
+                      msg: "لا يوجد سائق متاح في منطقتك حالياً",
+                    });
+                  } else if (driver != null) {
+                    //  console.log(driver);
+                    const e = await DistinationDuration(
+                      driver.location.coordinates[0],
+                      driver.location.coordinates[1],
+                      data.pickupLng,
+                      data.pickupLat
+                    ).then(async (driverTime) => {
+                      //  console.log("nm", i, driverTime);
+                      const Cost = await tripCost(
+                        data.pickupLng,
+                        data.pickupLat,
+                        data.dropoffLng,
+                        data.dropoffLat,
+                        driver.categoryCarTypeID,
+                        discountType,
+                        discountValue
+                      ).then((cost) => {
+                        //   console.log("cost", i, cost);
+                        responseArray.push({
+                          NameAR: driver.driverNameAr,
+                          NameEn: driver.driverNameEn,
+                          Photo: driver.driverImage,
+                          Minutes: parseInt(driverTime[0].duration.value / 60),
+                          dest: parseInt(driverTime[0].distance.value / 1000),
+                          Cost: cost,
+                          isMain: res[i - 1].isMain,
+                        });
+                        if (res[i - 1].isMain)
+                          mainCatTime = parseInt(
+                            driverTime[0].duration.value / 60
+                          );
+                      });
+                    });
+                  }
+                });
+              }
+
+              var driveTime = driveTimeCalc(
+                parseInt(time[0].duration.value / 60),
+                mainCatTime
+              );
+              const data1 = {
+                categories: responseArray,
+                mainCatTime,
+                driveTime,
+              };
+              console.log(data1);
+              if (
+                users.get(data.userid) != undefined ||
+                listinterval.get(data.userid) == id
+              ) {
+                var user_id = users.get(data.userId);
+                console.log(id);
+                io.to(user_id).emit("listCategory", data1);
+              }
+            });
+          };
+          var interval = setInterval(fun, 20000);
+        });
+      } catch {}
+    }
   });
 
   socket.on("trackCategory", async (data) => {
