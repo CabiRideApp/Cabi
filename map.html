@@ -11,13 +11,13 @@
         <script>
         var socket = io.connect('http://localhost:5000');
         userid=0
-        socket.emit("joinAdmin",userid)
+        socket.emit("join",userid)
         const data={
            lng: 31.23571798231443,
            lat: 30.044367093804816,
            maxDistance:790.1836707231585
         }
-        socket.emit("AdminGetDrivers",data)
+        socket.emit("getAvailable",data)
 
     </script>
     </body>

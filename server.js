@@ -15,6 +15,7 @@ var serviceAccount = require("./cabi-app-firebase-adminsdk-4cy4f-c6feddd07b.json
 const {listIndexes} = require("./models/Driver");
 const {fdatasync} = require("fs");
 const {v4: uuidv4} = require("uuid");
+const Driver = require("./models/Driver");
 
 require("dotenv/config");
 
@@ -400,10 +401,10 @@ io.on("connection", (socket) => {
             pickAddress: data.pickAddress,
             dropoffLat: dropoffLat,
             dropoffLng: dropoffLng,
-            dropoffAddress: data.pickAddress,
+            dropoffAddress: data.dropoffAddress,
             promoCode: data.promoCode,
             categoryCarTypeID: data.categoryCarTypeID,
-            cancelReasonID: data.cancelReasonID,
+            cancelReasonID: 0,
             paymentStatusID: data.paymentStatusID,
             tripID: Trip_ID,
             tripStatusId: 2,
@@ -415,13 +416,13 @@ io.on("connection", (socket) => {
             dropoffLng,
             dropoffLat
           );
-          console.log(driverTime, "driverTime");
+
           var from_to = {
             pickupLat: pickupLat,
             pickupLng: pickupLng,
             pickAddress: data.pickAddress,
-            dropoffLat: pickupLat,
-            dropoffLng: pickupLng,
+            dropoffLat: dropoffLat,
+            dropoffLng: dropoffLng,
             dropoffAddress: data.pickAddress,
             userId: userID,
             tripID: Trip_ID,
@@ -435,6 +436,15 @@ io.on("connection", (socket) => {
               pickupLng,
               drivers[0].location.coordinates[1],
               drivers[0].location.coordinates[0]
+            );
+            var tripCost = await tripCost(
+              pickupLng,
+              pickupLat,
+              dropoffLng,
+              dropoffLat,
+              data.categoryCarTypeID,
+              data.discountType,
+              data.discountValue //////////////////////where it is
             );
             if (drivers.length > 1)
               var reachTime1 = await DistinationDuration(
@@ -450,44 +460,40 @@ io.on("connection", (socket) => {
                 drivers[2].location.coordinates[1],
                 drivers[2].location.coordinates[0]
               );
-            console.log(reachTime, "reachTime");
 
             from_to.reachTime = parseInt(reachTime[0].duration.value / 60);
             from_to.arriveTime = driveTimeCalc(0, reachTime);
-
+            from_to.tripCost = tripCost;
             try {
-              console.log("begin");
               admin
                 .messaging()
-                .sendToDevice(drivers[0].tokenID, from_to, notification_options)
+                .sendToDevice(
+                  drivers[0].tokenID,
+                  {data: {message: "you have a new trip"}},
+                  notification_options
+                ) //////////////////////////change from_to to string
                 .then(() => {
-                  io.to(users.get(drivers[0].driverID)).emit(
-                    "tripInfo",
-                    from_to
-                  );
-                  console.log("response");
                   var distance = 20;
                   var now = 0;
+                  socket
+                    .to(users.get(drivers[0].tokenID))
+                    .emit("tripInfo", from_to);
                   var x = setInterval(function () {
                     now++;
-                    socket.once("driverRespond", (data2) => {
+                    socket.on("driverRespond", (data2) => {
                       clearInterval(x);
                       socket
                         .to(users.get(drivers[0].driverID))
                         .emit("driverRespond", data2);
                     });
-                    socket.once("cancel", (data3) => {
+                    socket.on("cancel", (data3) => {
                       try {
                         trip.cancelReasonID = data3;
                         admin
                           .messaging()
                           .sendToDevice(
                             drivers[0].tokenID,
-                            {
-                              data: {
-                                message: "trip canceled",
-                              },
-                            },
+                            {data: {message: "trip canceled"}},
                             notification_options
                           )
                           .then(() => {
@@ -543,16 +549,7 @@ io.on("connection", (socket) => {
                         data.registrationToken,
                         {
                           data: {
-                            message: "تم قبول رحلتك",
-                            approved: "" + true,
-                            phoneNumber: "" + dr[0].phoneNumber,
-                            idNo: "" + dr[0].idNo,
-                            driverNameAr: dr[0].driverNameAr,
-                            driverNameEn: dr[0].driverNameEn,
-                            modelNameAr: dr[0].modelNameAr,
-                            modelNameEn: dr[0].modelNameEn,
-                            colorNameAr: dr[0].colorNameAr,
-                            colorNameEn: dr[0].colorNameEn,
+                            message: `trip has been approved from ${pickAddress} to ${dropoffAddress} `,
                           },
                         },
                         notification_options
@@ -560,42 +557,44 @@ io.on("connection", (socket) => {
                       .then(async () => {
                         const data = {
                           status:
-                            dr[0].isOnline === true && dr[0].isBusy == false
+                            drivers[0].isOnline === true &&
+                            drivers[0].isBusy == false
                               ? 1
-                              : dr[0].isOnline == true && dr[0].isBusy == true
+                              : drivers[0].isOnline == true &&
+                                drivers[0].isBusy == true
                               ? 2
-                              : dr[0].isOnline == false
+                              : drivers[0].isOnline == false
                               ? 3
                               : 0,
-                          driverID: dr[0].driverID,
-                          location: dr[0].location,
-                          categoryCarTypeID: dr[0].categoryCarTypeID,
-                          phoneNumber: dr[0].phoneNumber,
-                          idNo: dr[0].idNo,
-                          driverNameAr: dr[0].driverNameAr,
-                          driverNameEn: dr[0].driverNameEn,
-                          modelNameAr: dr[0].modelNameAr,
-                          modelNameEn: dr[0].modelNameEn,
-                          colorNameAr: dr[0].colorNameAr,
-                          colorNameEn: dr[0].colorNameEn,
-                          carImage: dr[0].carImage,
-                          driverImage: dr[0].driverImage,
-                          updateLocationDate: dr[0].updateLocationDate,
-                          trip: dr[0].isBusy ? dr[0].busyTrip : "",
+                          driverID: drivers[0].driverID,
+                          location: drivers[0].location,
+                          categoryCarTypeID: drivers[0].categoryCarTypeID,
+                          phoneNumber: drivers[0].phoneNumber,
+                          idNo: drivers[0].idNo,
+                          driverNameAr: drivers[0].driverNameAr,
+                          driverNameEn: drivers[0].driverNameEn,
+                          modelNameAr: drivers[0].modelNameAr,
+                          modelNameEn: drivers[0].modelNameEn,
+                          colorNameAr: drivers[0].colorNameAr,
+                          colorNameEn: drivers[0].colorNameEn,
+                          carImage: drivers[0].carImage,
+                          driverImage: drivers[0].driverImage,
+                          updateLocationDate: drivers[0].updateLocationDate,
+                          trip: drivers[0].isBusy ? drivers[0].busyTrip : "",
                         };
                         console.log(data);
                         admins.forEach((admin) => {
-                          io.to(admin).emit("trackAdmin", data);
+                          socket.to(admin).emit("trackAdmin", data);
+                          socket.to(admin).emit("trackCount"); ////////////////////////// need some data
                         });
                       })
                       .then(() => {
                         var tr = setInterval(function () {
                           DriverM.find({driverID: dr[0].driverID}).then(
                             (driver) => {
-                              io.to(users.get(userID)).emit(
-                                "trackDriverLocation",
-                                driver.location
-                              );
+                              socket
+                                .to(users.get(userID))
+                                .emit("trackDriverLocation", driver.location);
                               if (
                                 driver.location.coordinates[0] === pickupLat &&
                                 driver.location.coordinates[1] === pickupLng
@@ -604,6 +603,10 @@ io.on("connection", (socket) => {
                               }
                             }
                           );
+                          socket.on("arrive", () => {
+                            clearInterval(tr);
+                            socket.to(users.get(userID)).emit("finish");
+                          });
                         }, 1000);
                       })
                       .catch((error) => {
@@ -627,6 +630,12 @@ io.on("connection", (socket) => {
                       });
                       savedTrip.then((saved) => {
                         try {
+                          let obj = saved;
+                          obj.location = drivers[0].location;
+                          obj.reachTime = from_to.reachTime;
+                          obj.driveTime = from_to.driveTime;
+                          obj.tripCost = from_to.tripCost;
+                          socket.to(users.get(userID)).emit("tripInfo", obj);
                           axios({
                             method: "post",
                             url:
@@ -647,24 +656,21 @@ io.on("connection", (socket) => {
                     from_to.reachTime = parseInt(
                       reachTime1[0].duration.value / 60
                     );
+                    from_to.arriveTime = driveTimeCalc(0, reachTime);
+                    from_to.tripCost = tripCost;
                     admin
                       .messaging()
                       .sendToDevice(
                         drivers[1].tokenID,
-                        {
-                          data: {
-                            message: "trip canceled",
-                          },
-                        },
+                        {data: {message: "you have a new trip"}},
                         notification_options
-                      )
+                      ) //////////////////////////change from_to to string
                       .then(() => {
-                        io.to(users.get(drivers[1].driverID)).emit(
-                          "tripInfo",
-                          from_to
-                        );
                         var distance = 20;
                         var now = 0;
+                        socket
+                          .to(users.get(drivers[1].tokenID))
+                          .emit("tripInfo", from_to);
                         var x = setInterval(function () {
                           now++;
                           socket.once("driverRespond", (data2) => {
@@ -680,7 +686,7 @@ io.on("connection", (socket) => {
                               .messaging()
                               .sendToDevice(
                                 users.get(drivers[1].tokenID),
-                                {msg: "cancel request"},
+                                {msg: "trip canceled"},
                                 notification_options
                               );
                           });
@@ -707,16 +713,7 @@ io.on("connection", (socket) => {
                               data.registrationToken,
                               {
                                 data: {
-                                  message: "تم قبول رحلتك",
-                                  approved: "" + true,
-                                  phoneNumber: "" + dr[1].phoneNumber,
-                                  idNo: "" + dr[1].idNo,
-                                  driverNameAr: dr[1].driverNameAr,
-                                  driverNameEn: dr[1].driverNameEn,
-                                  modelNameAr: dr[1].modelNameAr,
-                                  modelNameEn: dr[1].modelNameEn,
-                                  colorNameAr: dr[1].colorNameAr,
-                                  colorNameEn: dr[1].colorNameEn,
+                                  message: `trip has been approved from ${pickAddress} to ${dropoffAddress} `,
                                 },
                               },
                               notification_options
@@ -724,44 +721,50 @@ io.on("connection", (socket) => {
                             .then(() => {
                               const data = {
                                 status:
-                                  dr[1].isOnline === true &&
-                                  dr[1].isBusy == false
+                                  drivers[1].isOnline === true &&
+                                  drivers[1].isBusy == false
                                     ? 1
-                                    : dr[1].isOnline == true &&
-                                      dr[1].isBusy == true
+                                    : drivers[1].isOnline == true &&
+                                      drivers[1].isBusy == true
                                     ? 2
-                                    : dr[1].isOnline == false
+                                    : drivers[1].isOnline == false
                                     ? 3
                                     : 0,
-                                driverID: dr[1].driverID,
-                                location: dr[1].location,
-                                categoryCarTypeID: dr[1].categoryCarTypeID,
-                                phoneNumber: dr[1].phoneNumber,
-                                idNo: dr[1].idNo,
-                                driverNameAr: dr[1].driverNameAr,
-                                driverNameEn: dr[1].driverNameEn,
-                                modelNameAr: dr[1].modelNameAr,
-                                modelNameEn: dr[1].modelNameEn,
-                                colorNameAr: dr[1].colorNameAr,
-                                colorNameEn: dr[1].colorNameEn,
-                                carImage: dr[1].carImage,
-                                driverImage: dr[1].driverImage,
-                                updateLocationDate: dr[1].updateLocationDate,
-                                trip: dr[1].isBusy ? dr[1].busyTrip : "",
+                                driverID: drivers[1].driverID,
+                                location: drivers[1].location,
+                                categoryCarTypeID: drivers[1].categoryCarTypeID,
+                                phoneNumber: drivers[1].phoneNumber,
+                                idNo: drivers[1].idNo,
+                                driverNameAr: drivers[1].driverNameAr,
+                                driverNameEn: drivers[1].driverNameEn,
+                                modelNameAr: drivers[1].modelNameAr,
+                                modelNameEn: drivers[1].modelNameEn,
+                                colorNameAr: drivers[1].colorNameAr,
+                                colorNameEn: drivers[1].colorNameEn,
+                                carImage: drivers[1].carImage,
+                                driverImage: drivers[1].driverImage,
+                                updateLocationDate:
+                                  drivers[1].updateLocationDate,
+                                trip: drivers[1].isBusy
+                                  ? drivers[1].busyTrip
+                                  : "",
                               };
                               console.log(data);
                               admins.forEach((admin) => {
-                                io.to(admin).emit("trackAdmin", data);
+                                socket.to(admin).emit("trackAdmin", data);
+                                socket.to(admin).emit("trackCount");
                               });
                             })
                             .then(() => {
                               var tr = setInterval(function () {
                                 DriverM.find({driverID: dr[1].driverID}).then(
                                   (driver) => {
-                                    io.to(users.get(userID)).emit(
-                                      "trackDriverLocation",
-                                      driver.location
-                                    );
+                                    socket
+                                      .to(users.get(userID))
+                                      .emit(
+                                        "trackDriverLocation",
+                                        driver.location
+                                      );
                                     if (
                                       driver.location.coordinates[0] ===
                                         pickupLat &&
@@ -772,6 +775,10 @@ io.on("connection", (socket) => {
                                     }
                                   }
                                 );
+                                socket.on("arrive", () => {
+                                  clearInterval(tr);
+                                  socket.to(users.get(userID)).emit("finish");
+                                });
                               }, 1000);
                             })
                             .catch((error) => {
@@ -795,6 +802,14 @@ io.on("connection", (socket) => {
                             });
                             savedTrip.then((saved) => {
                               try {
+                                let obj = saved;
+                                obj.location = drivers[1].location;
+                                obj.reachTime = from_to.reachTime;
+                                obj.driveTime = from_to.driveTime;
+                                obj.tripCost = from_to.tripCost;
+                                socket
+                                  .to(users.get(userID))
+                                  .emit("tripInfo", obj);
                                 axios({
                                   method: "post",
                                   url:
@@ -812,27 +827,24 @@ io.on("connection", (socket) => {
                             console.log(error);
                           }
                         } else if (drivers.length > 2) {
-                          from_to.reachTime = parseInt(
+                          ffrom_to.reachTime = parseInt(
                             reachTime2[0].duration.value / 60
                           );
+                          from_to.arriveTime = driveTimeCalc(0, reachTime);
+                          from_to.tripCost = tripCost;
                           admin
                             .messaging()
                             .sendToDevice(
                               drivers[2].tokenID,
-                              {
-                                data: {
-                                  message: "trip canceled",
-                                },
-                              },
+                              {data: {message: "you have a new trip"}},
                               notification_options
-                            )
+                            ) //////////////////////////change from_to to string
                             .then(() => {
-                              io.to(users.get(drivers[2].driverID)).emit(
-                                "tripInfo",
-                                from_to
-                              );
                               var distance = 20;
                               var now = 0;
+                              socket
+                                .to(users.get(drivers[2].tokenID))
+                                .emit("tripInfo", from_to);
                               var x = setInterval(function () {
                                 now++;
                                 socket.once("driverRespond", (data2) => {
@@ -848,7 +860,7 @@ io.on("connection", (socket) => {
                                     .messaging()
                                     .sendToDevice(
                                       users.get(drivers[2].tokenID),
-                                      {msg: "cancel request"},
+                                      {msg: "trip canceled"},
                                       notification_options
                                     );
                                 });
@@ -876,16 +888,7 @@ io.on("connection", (socket) => {
                                 data.registrationToken,
                                 {
                                   data: {
-                                    message: "تم قبول رحلتك",
-                                    approved: "" + true,
-                                    phoneNumber: "" + dr[2].phoneNumber,
-                                    idNo: "" + dr[2].idNo,
-                                    driverNameAr: dr[2].driverNameAr,
-                                    driverNameEn: dr[2].driverNameEn,
-                                    modelNameAr: dr[2].modelNameAr,
-                                    modelNameEn: dr[2].modelNameEn,
-                                    colorNameAr: dr[2].colorNameAr,
-                                    colorNameEn: dr[2].colorNameEn,
+                                    message: `trip has been approved from ${pickAddress} to ${dropoffAddress} `,
                                   },
                                 },
                                 notification_options
@@ -893,44 +896,51 @@ io.on("connection", (socket) => {
                               .then(() => {
                                 const data = {
                                   status:
-                                    dr[2].isOnline === true &&
-                                    dr[2].isBusy == false
+                                    drivers[2].isOnline === true &&
+                                    drivers[2].isBusy == false
                                       ? 1
-                                      : dr[2].isOnline == true &&
-                                        dr[2].isBusy == true
+                                      : drivers[2].isOnline == true &&
+                                        drivers[2].isBusy == true
                                       ? 2
-                                      : dr[2].isOnline == false
+                                      : drivers[2].isOnline == false
                                       ? 3
                                       : 0,
-                                  driverID: dr[2].driverID,
-                                  location: dr[2].location,
-                                  categoryCarTypeID: dr[2].categoryCarTypeID,
-                                  phoneNumber: dr[2].phoneNumber,
-                                  idNo: dr[2].idNo,
-                                  driverNameAr: dr[2].driverNameAr,
-                                  driverNameEn: dr[2].driverNameEn,
-                                  modelNameAr: dr[2].modelNameAr,
-                                  modelNameEn: dr[2].modelNameEn,
-                                  colorNameAr: dr[2].colorNameAr,
-                                  colorNameEn: dr[2].colorNameEn,
-                                  carImage: dr[2].carImage,
-                                  driverImage: dr[2].driverImage,
-                                  updateLocationDate: dr[2].updateLocationDate,
-                                  trip: dr[2].isBusy ? dr[2].busyTrip : "",
+                                  driverID: drivers[2].driverID,
+                                  location: drivers[2].location,
+                                  categoryCarTypeID:
+                                    drivers[2].categoryCarTypeID,
+                                  phoneNumber: drivers[2].phoneNumber,
+                                  idNo: drivers[2].idNo,
+                                  driverNameAr: drivers[2].driverNameAr,
+                                  driverNameEn: drivers[2].driverNameEn,
+                                  modelNameAr: drivers[2].modelNameAr,
+                                  modelNameEn: drivers[2].modelNameEn,
+                                  colorNameAr: drivers[2].colorNameAr,
+                                  colorNameEn: drivers[2].colorNameEn,
+                                  carImage: drivers[2].carImage,
+                                  driverImage: drivers[2].driverImage,
+                                  updateLocationDate:
+                                    drivers[2].updateLocationDate,
+                                  trip: drivers[2].isBusy
+                                    ? drivers[2].busyTrip
+                                    : "",
                                 };
                                 console.log(data);
                                 admins.forEach((admin) => {
-                                  io.to(admin).emit("trackAdmin", data);
+                                  socket.to(admin).emit("trackAdmin", data);
+                                  socket.to(admin).emit("trackCount");
                                 });
                               })
                               .then(() => {
                                 var tr = setInterval(function () {
                                   DriverM.find({driverID: dr[2].driverID}).then(
                                     (driver) => {
-                                      io.to(users.get(userID)).emit(
-                                        "trackDriverLocation",
-                                        driver.location
-                                      );
+                                      socket
+                                        .to(users.get(userID))
+                                        .emit(
+                                          "trackDriverLocation",
+                                          driver.location
+                                        );
                                       if (
                                         driver.location.coordinates[0] ===
                                           pickupLat &&
@@ -941,6 +951,10 @@ io.on("connection", (socket) => {
                                       }
                                     }
                                   );
+                                  socket.on("arrive", () => {
+                                    clearInterval(tr);
+                                    socket.to(users.get(userID)).emit("finish");
+                                  });
                                 }, 1000);
                               })
                               .catch((error) => {
@@ -964,15 +978,23 @@ io.on("connection", (socket) => {
                               });
                               savedTrip.then((saved) => {
                                 try {
-                                  // axios({
-                                  //   method: "post",
-                                  //   url:
-                                  //     "https://devmachine.taketosa.com/api/Trip/NewTrip",
-                                  //   data: saved,
-                                  //   headers: {
-                                  //     Authorization: `Bearer ${data.token}`,
-                                  //   },
-                                  // });
+                                  let obj = saved;
+                                  obj.location = drivers[2].location;
+                                  obj.reachTime = from_to.reachTime;
+                                  obj.driveTime = from_to.driveTime;
+                                  obj.tripCost = from_to.tripCost;
+                                  socket
+                                    .to(users.get(userID))
+                                    .emit("tripInfo", obj);
+                                  axios({
+                                    method: "post",
+                                    url:
+                                      "https://devmachine.taketosa.com/api/Trip/NewTrip",
+                                    data: saved,
+                                    headers: {
+                                      Authorization: `Bearer ${data.token}`,
+                                    },
+                                  });
                                 } catch (error) {
                                   console.log("abc");
                                 }
@@ -982,16 +1004,18 @@ io.on("connection", (socket) => {
                             }
                           } else {
                             try {
-                              admin.messaging().sendToDevice(
-                                data.registrationToken,
-                                {
-                                  data: {
-                                    message: "لا يوجد سائق في منطقتك الحالية",
-                                    approved: "" + false,
+                              admin
+                                .messaging()
+                                .sendToDevice(
+                                  data.registrationToken,
+                                  {
+                                    data: {
+                                      message:
+                                        "there is no drivers available right now",
+                                    },
                                   },
-                                },
-                                notification_options
-                              );
+                                  notification_options
+                                );
                             } catch (error) {
                               console.log("abc");
                             }
@@ -1020,16 +1044,18 @@ io.on("connection", (socket) => {
                           }
                         } else {
                           try {
-                            admin.messaging().sendToDevice(
-                              data.registrationToken,
-                              {
-                                data: {
-                                  message: "لا يوجد سائق في منطقتك الحالية",
-                                  approved: "" + false,
+                            admin
+                              .messaging()
+                              .sendToDevice(
+                                data.registrationToken,
+                                {
+                                  data: {
+                                    message:
+                                      "there is no drivers available right now",
+                                  },
                                 },
-                              },
-                              notification_options
-                            );
+                                notification_options
+                              );
                           } catch (error) {
                             console.log("abc");
                           }
@@ -1059,16 +1085,18 @@ io.on("connection", (socket) => {
                       });
                   } else {
                     try {
-                      admin.messaging().sendToDevice(
-                        data.registrationToken,
-                        {
-                          data: {
-                            message: "لا يوجد سائق في منطقتك الحالية",
-                            approved: "" + false,
+                      admin
+                        .messaging()
+                        .sendToDevice(
+                          data.registrationToken,
+                          {
+                            data: {
+                              message:
+                                "there is no drivers available right now",
+                            },
                           },
-                        },
-                        notification_options
-                      );
+                          notification_options
+                        );
                     } catch (error) {
                       console.log("abc");
                     }
@@ -1103,7 +1131,6 @@ io.on("connection", (socket) => {
         });
       });
     });
-    console.log("the end");
   });
 
   socket.on("updatelocation", (data) => {
@@ -1299,6 +1326,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("listCategory", async (data) => {
+    console.log(data);
     const id = uuidv4();
     listinterval.set(data.userid, id);
     if (data.promoCode) {
@@ -1501,6 +1529,7 @@ io.on("connection", (socket) => {
                 mainCatTime,
                 driveTime,
               };
+              console.log(data1);
               if (
                 users.get(data.userid) != undefined ||
                 listinterval.get(data.userid) == id
