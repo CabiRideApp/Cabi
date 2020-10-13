@@ -355,40 +355,35 @@ io.on("connection", (socket) => {
   console.log("a user connected");
 
   socket.on("newTrip", async (data) => {
-    var discountType;
-    var discountValue;
-    if (data.promoCode) {
-      const promoResponse = await axios.post(
-        "https://devmachine.taketosa.com/api/Trip/CheckPromoCode",
-        {
-          params: {
-            promoCode: data.promoCode,
-          },
-          headers: {
-            Authorization: `Bearer ${data.token}`,
-          },
-        }
-      );
-      console.log(promoResponse.data);
-      if (
-        (!promoResponse.data.status || !promoResponse.data.data.isValid) &&
-        data.promoCode
-      ) {
+    var discountType = -1;
+    var discountValue = 0;
+    console.log(data);
+
+    const config = {
+      method: "post",
+      url: `http://devmachine.taketosa.com/api/Trip/CheckPromoCode?promoCode=${data.promoCode}`,
+      headers: {
+        "Content-Type": "application / json",
+        Authorization: "Bearer " + data.token,
+      },
+    };
+
+    let promoResponse = await axios(config).then((res) => {
+      console.log(res.data);
+      if ((!res.data.status || !res.data.data.isValid) && data.promoCode) {
         var user_id = users.get(data.userId);
+        discountValue = -1;
         io.to(user_id).emit("promoCode", {
-          messageEn: promoResponse.messageEn,
-          messageAr: promoResponse.messageAr,
+          messageEn: res.messageEn,
+          messageAr: res.messageAr,
         });
+      } else if (res.data.data.isValid) {
+        discountType = res.data.data.discountType;
+        discountValue = res.data.data.discountValue;
       }
-    } else {
-      if (data.promoCode) {
-        (discountType = promoResponse.data.data.discountType),
-          (discountValue = promoResponse.data.data.discountValue);
-      } else {
-        discountType = -1;
-        discountValue = 0;
-      }
-    }
+    });
+    console.log(discountType, discountValue);
+
     var userID = data.userId;
     var pickupLat = data.pickupLat;
     var pickupLng = data.pickupLng;
