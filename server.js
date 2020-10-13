@@ -1355,37 +1355,35 @@ io.on("connection", (socket) => {
   socket.on("listCategory", async (data) => {
     const id = uuidv4();
     listinterval.set(data.userid, id);
-    var discountType;
-    var discountValue;
-    if (data.promoCode) {
-      //  console.log(data);
+    var discountType = -1;
+    var discountValue = 0;
+    console.log(data);
 
-      const config = {
-        method: "post",
-        url: `http://devmachine.taketosa.com/api/Trip/CheckPromoCode?promoCode=${data.promoCode}`,
-        headers: {
-          "Content-Type": "application / json",
-          Authorization: "Bearer " + data.token,
-        },
-      };
+    const config = {
+      method: "post",
+      url: `http://devmachine.taketosa.com/api/Trip/CheckPromoCode?promoCode=${data.promoCode}`,
+      headers: {
+        "Content-Type": "application / json",
+        Authorization: "Bearer " + data.token,
+      },
+    };
 
-      let promoResponse = await axios(config).then((res) => {
-        console.log(res.data);
-        if ((!res.data.status || !res.data.data.isValid) && data.promoCode) {
-          var user_id = users.get(data.userId);
-          discountType = -1;
-          discountValue = 0;
-          io.to(user_id).emit("promoCode", {
-            messageEn: res.messageEn,
-            messageAr: res.messageAr,
-          });
-        } else {
-          discountType = res.data.data.discountType;
-          discountValue = res.data.data.discountValue;
-        }
-      });
-      // console.log(discountType, discountValue);
-    } else {
+    let promoResponse = await axios(config).then((res) => {
+      console.log(res.data);
+      if ((!res.data.status || !res.data.data.isValid) && data.promoCode) {
+        var user_id = users.get(data.userId);
+        discountValue = -1;
+        io.to(user_id).emit("promoCode", {
+          messageEn: res.messageEn,
+          messageAr: res.messageAr,
+        });
+      } else if (res.data.data.isValid) {
+        discountType = res.data.data.discountType;
+        discountValue = res.data.data.discountValue;
+      }
+    });
+    console.log(discountType, discountValue);
+    if (discountValue != -1) {
       try {
         const time = await DistinationDuration(
           data.dropoffLat,
@@ -1467,7 +1465,7 @@ io.on("connection", (socket) => {
               mainCatTime,
               driveTime,
             };
-            //console.log(data1);
+            console.log(data1);
             var user_id = users.get(data.userId);
             io.to(user_id).emit("listCategory", data1);
           });
