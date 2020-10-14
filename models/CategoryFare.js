@@ -3,7 +3,7 @@ const {Number, Boolean} = mongoose.Schema.Types;
 
 const categoryFareSchema = new mongoose.Schema({
   categoryFareID: {
-    type: Number,
+    type: String,
   },
   categoryCarTypeID: {
     type: Number,

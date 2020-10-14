@@ -1362,21 +1362,22 @@ io.on("connection", (socket) => {
         Authorization: "Bearer " + data.token,
       },
     };
-
-    let promoResponse = await axios(config).then((res) => {
-      console.log(res.data);
-      if ((!res.data.status || !res.data.data.isValid) && data.promoCode) {
-        var user_id = users.get(data.userId);
-        discountValue = -1;
-        io.to(user_id).emit("promoCode", {
-          messageEn: res.messageEn,
-          messageAr: res.messageAr,
-        });
-      } else if (res.data.data.isValid) {
-        discountType = res.data.data.discountType;
-        discountValue = res.data.data.discountValue;
-      }
-    });
+    if (data.promoCode != "") {
+      let promoResponse = await axios(config).then((res) => {
+        console.log(res.data);
+        if ((!res.data.status || !res.data.data.isValid) && data.promoCode) {
+          var user_id = users.get(data.userId);
+          discountValue = -1;
+          console.log(user_id);
+          io.to(user_id).emit("promoCode", {
+            message: res.data.message,
+          });
+        } else if (res.data.data.isValid) {
+          discountType = res.data.data.discountType;
+          discountValue = res.data.data.discountValue;
+        }
+      });
+    }
     console.log(discountType, discountValue);
     if (discountValue != -1) {
       try {
@@ -1415,7 +1416,7 @@ io.on("connection", (socket) => {
                     msg: "لا يوجد سائق متاح في منطقتك حالياً",
                   });
                 } else if (driver != null) {
-                  // console.log(driver);
+                  //console.log(driver);
                   const e = await DistinationDuration(
                     driver.location.coordinates[0],
                     driver.location.coordinates[1],
@@ -1432,14 +1433,14 @@ io.on("connection", (socket) => {
                       discountType,
                       discountValue
                     ).then((cost) => {
-                      //console.log("cost", i, cost);
+                      // console.log("cost", i, cost);
                       responseArray.push({
                         NameAR: driver.driverNameAr,
                         NameEn: driver.driverNameEn,
-                        Photo: driver.driverImage,
+                        Photo: driver.carImage,
                         Minutes: parseInt(driverTime[0].duration.value / 60),
                         dest: parseInt(driverTime[0].distance.value / 1000),
-                        Cost: cost,
+                        Cost: parseInt(cost),
                         isMain: res[i - 1].isMain,
                       });
                       if (res[i - 1].isMain)
@@ -1447,6 +1448,7 @@ io.on("connection", (socket) => {
                           driverTime[0].duration.value / 60
                         );
                     });
+                    //console.log(driver.driverImage);
                   });
                 }
               });
@@ -1547,7 +1549,7 @@ io.on("connection", (socket) => {
                 mainCatTime,
                 driveTime,
               };
-              console.log(data1);
+              //  console.log(data1);
               if (
                 users.get(data.userid) != undefined ||
                 listinterval.get(data.userid) == id
@@ -2011,7 +2013,7 @@ const tripCost = async (
   var distanceTime = timedest[0].duration.value / 60;
   var distanceKM = timedest[0].distance.value / 1000;
   //console.log(carCategory)
-  // console.log(distanceTime, distanceKM);
+  //console.log(distanceTime, distanceKM);
   const CategoryFare = await CategoryFareM.findOne({
     categoryCarTypeID: carCategory,
   });
@@ -2024,13 +2026,19 @@ const tripCost = async (
   var MinCost = distanceTime * CategoryFare.fareMinute;
   var MinFare = CategoryFare.minFare;
   var subTotal = KMCost + MinCost + MinFare;
+  //console.log(subTotal);
   if (discountType != -1) {
+    //console.log("kljlk", discountType, subTotal, discountValue);
+
     var discountCost =
-      discountType === 1 ? discountValue : (SubTotal * discountValue) / 100;
+      discountType === 1 ? discountValue : (subTotal * discountValue) / 100;
     var TotalAfterDis = subTotal - discountCost;
-  } else TotalAfterDis = subTotal;
+    //console.log(discountCost, TotalAfterDis);
+  } else {
+    TotalAfterDis = subTotal;
+  }
   var VatCost = (tax * TotalAfterDis) / 100;
-  //console.log(TotalAfterDis + VatCost, "kkjkljkl")
+  // console.log(TotalAfterDis + VatCost, "kkjkljkl");
   return TotalAfterDis + VatCost;
 };
 
