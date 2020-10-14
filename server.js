@@ -1508,6 +1508,7 @@ io.on("connection", (socket) => {
 
   socket.on("listCategory", async (data) => {
     const id = uuidv4();
+    console.log("kljkljlk");
     listinterval.set(data.userid, id);
     var discountType = -1;
     var discountValue = 0;
