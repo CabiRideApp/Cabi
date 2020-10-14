@@ -1430,7 +1430,7 @@ io.on("connection", (socket) => {
           time:
             time[0].duration == undefined
               ? -1
-              : parseInt(time[0].duration.value / 60),
+              : (time[0].duration.value / 60).toFixed(),
         };
         let user_id = users.get(data.userid);
         // console.log(user_id);
@@ -1488,7 +1488,7 @@ io.on("connection", (socket) => {
             time:
               time[0].duration == undefined
                 ? -1
-                : parseInt(time[0].duration.value / 60),
+                : (time[0].duration.value / 60).toFixed(),
           };
           if (
             users.get(data.userid) != undefined ||
@@ -1508,11 +1508,10 @@ io.on("connection", (socket) => {
 
   socket.on("listCategory", async (data) => {
     const id = uuidv4();
-    console.log("kljkljlk");
     listinterval.set(data.userid, id);
     var discountType = -1;
     var discountValue = 0;
-    console.log(data);
+    //console.log(data);
 
     const config = {
       method: "post",
@@ -1528,7 +1527,7 @@ io.on("connection", (socket) => {
         if ((!res.data.status || !res.data.data.isValid) && data.promoCode) {
           var user_id = users.get(data.userId);
           discountValue = -1;
-          console.log(user_id);
+          //console.log(user_id);
           io.to(user_id).emit("promoCode", {
             message: res.data.message,
             status: false,
@@ -1543,7 +1542,7 @@ io.on("connection", (socket) => {
         }
       });
     }
-    console.log(discountType, discountValue);
+    //console.log(discountType, discountValue);
     if (discountValue != -1) {
       try {
         const time = await DistinationDuration(
@@ -1603,15 +1602,15 @@ io.on("connection", (socket) => {
                         NameAR: driver.driverNameAr,
                         NameEn: driver.driverNameEn,
                         Photo: driver.carImage,
-                        Minutes: parseInt(driverTime[0].duration.value / 60),
-                        dest: parseInt(driverTime[0].distance.value / 1000),
-                        Cost: parseInt(cost),
+                        Minutes: (driverTime[0].duration.value / 60).toFixed(),
+                        dest: (driverTime[0].distance.value / 1000).toFixed(),
+                        Cost: cost,
                         isMain: res[i - 1].isMain,
                       });
                       if (res[i - 1].isMain)
-                        mainCatTime = parseInt(
+                        mainCatTime = (
                           driverTime[0].duration.value / 60
-                        );
+                        ).toFixed();
                     });
                     //console.log(driver.driverImage);
                   });
@@ -1628,7 +1627,7 @@ io.on("connection", (socket) => {
               mainCatTime,
               driveTime,
             };
-            console.log(data1);
+            //console.log(data1);
             var user_id = users.get(data.userId);
             io.to(user_id).emit("listCategory", data1);
           });
@@ -1690,15 +1689,17 @@ io.on("connection", (socket) => {
                           NameAR: driver.driverNameAr,
                           NameEn: driver.driverNameEn,
                           Photo: driver.driverImage,
-                          Minutes: parseInt(driverTime[0].duration.value / 60),
-                          dest: parseInt(driverTime[0].distance.value / 1000),
+                          Minutes: (
+                            driverTime[0].duration.value / 60
+                          ).toFixed(),
+                          dest: (driverTime[0].distance.value / 1000).toFixed(),
                           Cost: cost,
                           isMain: res[i - 1].isMain,
                         });
                         if (res[i - 1].isMain)
-                          mainCatTime = parseInt(
+                          mainCatTime = (
                             driverTime[0].duration.value / 60
-                          );
+                          ).toFixed();
                       });
                     });
                   }
@@ -1823,13 +1824,13 @@ io.on("connection", (socket) => {
                       NameAR: driver.driverNameAr,
                       NameEn: driver.driverNameEn,
                       Photo: driver.driverImage,
-                      Minutes: parseInt(driverTime[0].duration.value / 60),
-                      dest: parseInt(driverTime[0].distance.value / 1000),
+                      Minutes: (driverTime[0].duration.value / 60).toFixed(),
+                      dest: (driverTime[0].distance.value / 1000).toFixed(),
                       Cost: cost,
                     };
                     var driveTime = driveTimeCalc(
-                      parseInt(time[0].duration.value / 60),
-                      parseInt(driverTime[0].duration.value / 60)
+                      (time[0].duration.value / 60).toFixed(),
+                      (driverTime[0].duration.value / 60).toFixed()
                     );
 
                     const data1 = {
@@ -1894,13 +1895,13 @@ io.on("connection", (socket) => {
                         NameAR: driver.driverNameAr,
                         NameEn: driver.driverNameEn,
                         Photo: driver.driverImage,
-                        Minutes: parseInt(driverTime[0].duration.value / 60),
-                        dest: parseInt(driverTime[0].distance.value / 1000),
+                        Minutes: (driverTime[0].duration.value / 60).toFixed(),
+                        dest: (driverTime[0].distance.value / 1000).toFixed(),
                         Cost: cost,
                       };
                       var driveTime = driveTimeCalc(
-                        parseInt(time[0].duration.value / 60),
-                        parseInt(driverTime[0].duration.value / 60)
+                        (time[0].duration.value / 60).toFixed(),
+                        (driverTime[0].duration.value / 60).toFixed()
                       );
                       const data1 = {
                         categories: temp,
@@ -2177,9 +2178,8 @@ const tripCost = async (
     dropoffLng,
     dropoffLat
   );
-  var distanceTime = timedest[0].duration.value / 60;
-  var distanceKM = timedest[0].distance.value / 1000;
-  //console.log(carCategory)
+  var distanceTime = (timedest[0].duration.value / 60).toFixed();
+  var distanceKM = (timedest[0].distance.value / 1000).toFixed(1);
   //console.log(distanceTime, distanceKM);
   const CategoryFare = await CategoryFareM.findOne({
     categoryCarTypeID: carCategory,
@@ -2188,7 +2188,9 @@ const tripCost = async (
   const tax = await DeliverySettingM.find({
     sort: 1,
   });
+  //console.log(distanceKM , CategoryFare.minKM,CategoryFare.baseFare)
   var KMCost = (distanceKM - CategoryFare.minKM) * CategoryFare.baseFare;
+  //console.log(KMCost)
   //if (KMCost < 3) KMCost = 0;
   var MinCost = distanceTime * CategoryFare.fareMinute;
   var MinFare = CategoryFare.minFare;
@@ -2206,7 +2208,7 @@ const tripCost = async (
   }
   var VatCost = (tax * TotalAfterDis) / 100;
   // console.log(TotalAfterDis + VatCost, "kkjkljkl");
-  return TotalAfterDis + VatCost;
+  return (TotalAfterDis + VatCost).toFixed(2);
 };
 
 function AddMinutesToDate(date, minutes, min) {
