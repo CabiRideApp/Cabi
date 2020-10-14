@@ -449,13 +449,14 @@ io.on("connection", (socket) => {
               pickAddress: data.pickAddress,
               dropoffLat: dropoffLat,
               dropoffLng: dropoffLng,
-              dropoffAddress: data.pickAddress,
+              dropoffAddress: data.dropoffAddress,
               userId: userID,
               tripID: Trip_ID,
               driverTime: parseInt(driverTime[0].duration.value / 60),
               distance: dist,
               paymentStatusID: data.paymentStatusID,
             };
+            //console.log(from_to)
 
             var tripC = await tripCost(
               pickupLng,
@@ -527,6 +528,11 @@ io.on("connection", (socket) => {
                     var now = 0;
                     console.log(users.get(drivers[0].driverID), "driver");
                     console.log(users.get(userID), "user");
+                    console.log(
+                      from_to,
+                      users.get(drivers[0].driverID),
+                      drivers[0].driverID
+                    );
                     socket
                       .to(users.get(drivers[0].driverID))
                       .emit("tripInfo", from_to);
@@ -1529,9 +1535,9 @@ io.on("connection", (socket) => {
         } else if (res.data.data.isValid) {
           discountType = res.data.data.discountType;
           discountValue = res.data.data.discountValue;
+          var user_id = users.get(data.userId);
           io.to(user_id).emit("promoCode", {
-            message: res.data.message,
-            status: false,
+            status: true,
           });
         }
       });
