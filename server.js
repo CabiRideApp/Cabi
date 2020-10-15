@@ -546,59 +546,52 @@ io.on("connection", (socket) => {
 
                     var x = setInterval(function () {
                       now++;
-                      while (true) {
-                        let flag = 0;
-                        socket.once("driverRespond", (data2) => {
-                          console.log(data2);
-                          socket
-                            .to(users.get(drivers[0].driverID))
-                            .emit("driverRespond1", data2);
-                          flag = 1;
-                        });
+                      console.log(now);
+                      socket.on("driverRespond", (data2) => {
+                        console.log(data2);
+                        socket
+                          .to(users.get(drivers[0].driverID))
+                          .emit("driverRespond1", data2);
+                      });
 
-                        socket.once("cancel", (data3) => {
-                          try {
-                            trip.cancelReasonID = data3;
-                            admin
-                              .messaging()
-                              .sendToDevice(
-                                drivers[0].tokenID,
-                                {data: {message: "trip canceled"}},
-                                notification_options
-                              )
-                              .then(() => {
-                                try {
-                                  trip.tripDrivers = dr;
-                                  const savedTrip = trip.save();
-                                  savedTrip.then((saved) => {
-                                    try {
-                                      axios({
-                                        method: "post",
-                                        url:
-                                          "https://devmachine.taketosa.com/api/Trip/NewTrip",
-                                        data: saved,
-                                        headers: {
-                                          Authorization: `Bearer ${data.token}`,
-                                        },
-                                      });
-                                    } catch (error) {
-                                      console.log("abc");
-                                    }
-                                  });
-                                } catch (error) {
-                                  console.log(error);
-                                }
-                              });
-                          } catch (error) {
-                            console.log("error");
-                          }
-                          flag = 1;
-                        });
-                        if (flag === 1) {
-                          clearInterval(x);
-                          break;
+                      socket.on("cancel", (data3) => {
+                        try {
+                          trip.cancelReasonID = data3;
+                          admin
+                            .messaging()
+                            .sendToDevice(
+                              drivers[0].tokenID,
+                              {data: {message: "trip canceled"}},
+                              notification_options
+                            )
+                            .then(() => {
+                              try {
+                                trip.tripDrivers = dr;
+                                const savedTrip = trip.save();
+                                savedTrip.then((saved) => {
+                                  try {
+                                    axios({
+                                      method: "post",
+                                      url:
+                                        "https://devmachine.taketosa.com/api/Trip/NewTrip",
+                                      data: saved,
+                                      headers: {
+                                        Authorization: `Bearer ${data.token}`,
+                                      },
+                                    });
+                                  } catch (error) {
+                                    console.log("abc");
+                                  }
+                                });
+                              } catch (error) {
+                                console.log(error);
+                              }
+                            });
+                        } catch (error) {
+                          console.log("error");
                         }
-                      }
+                      });
+
                       if (now === distance) {
                         clearInterval(x);
                         console.log("clear interval");
