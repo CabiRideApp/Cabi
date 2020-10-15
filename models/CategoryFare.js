@@ -8,6 +8,9 @@ const categoryFareSchema = new mongoose.Schema({
   categoryCarTypeID: {
     type: Number,
   },
+  categoryImage: {
+    type: String,
+  },
   baseFare: {
     type: Number,
   },
