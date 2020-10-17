@@ -15,9 +15,6 @@ const pointSchema = new mongoose.Schema({
 });
 
 const tripDriversSchema = mongoose.Schema({
-  tripID: {
-    type: Number,
-  },
   driverID: {
     type: Number,
   },
@@ -28,6 +25,12 @@ const tripDriversSchema = mongoose.Schema({
     type: pointSchema,
     index: "2dsphere",
     required: true,
+  },
+  lat: {
+    type: Number,
+  },
+  lng: {
+    type: Number,
   },
   actionDate: {
     type: Date,
@@ -41,7 +44,7 @@ const tripSchema = mongoose.Schema({
   pickupLng: {
     type: Number,
   },
-  pickAddress: {
+  pickupAddress: {
     type: String,
   },
   dropoffLat: {
