@@ -2023,6 +2023,7 @@ io.on("connection", (socket) => {
   socket.on("trackCategory", async (data) => {
     const id = uuidv4();
     //console.log(id);
+    //console.log(data);
     trackinterval.set(data.userid, id);
     var discountType = -1;
     var discountValue = 0;
@@ -2213,6 +2214,39 @@ io.on("connection", (socket) => {
         });
       } catch {}
     }
+  });
+
+  socket.on("CancelOnWay", async (data) => {
+    console.log(data);
+    try {
+      Pending.findOne({tripID: data.trip}).then(async (trip) => {
+        // console.log(trip);
+
+        const config = {
+          method: "post",
+          url: `https://devmachine.taketosa.com/api/Trip/CancelTrip?tripMasterID=${data.tripMasterID}&cancelReasonID=${data.cancelReasonID}&Lat=${data.Lat}&Lang=${data.Lang}`,
+          headers: {
+            "Content-Type": "application / json",
+            Authorization: "Bearer " + data.token,
+            "Accept-Language": data.Language,
+          },
+        };
+
+        let promoResponse = await axios(config).then((res) => {
+          console.log(res.data.message);
+          io.to(users.get(tripuserID)).emit("CanelOnWay", res.data.message);
+          admin.messaging().sendToDevice(
+            trip.registrationToken,
+            {
+              data: {
+                message: res.data.message,
+              },
+            },
+            notification_options
+          );
+        });
+      });
+    } catch {}
   });
 
   socket.on("AdminGetDrivers", (data) => {

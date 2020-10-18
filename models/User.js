@@ -1,9 +1,6 @@
 const mongoose = require("mongoose");
 
-const {
-  Number,
-  Boolean
-} = mongoose.Schema.Types;
+const {Number, Boolean} = mongoose.Schema.Types;
 
 const userSchema = mongoose.Schema({
   name: {
@@ -24,8 +21,8 @@ const userSchema = mongoose.Schema({
   },
   gender: {
     type: String,
-    required: true
-  }
+    required: true,
+  },
 });
 
 const User = mongoose.model("User", userSchema);
