@@ -14,6 +14,7 @@ const admin = require("firebase-admin");
 var serviceAccount = require("./cabi-app-firebase-adminsdk-4cy4f-c6feddd07b.json");
 const {listIndexes} = require("./models/Driver");
 const {v4: uuidv4} = require("uuid");
+const Driver = require("./models/Driver");
 const Pending = require("./models/Pending");
 
 require("dotenv/config");
@@ -428,7 +429,7 @@ io.on("connection", (socket) => {
               promoCode: data.promoCode,
               categoryCarTypeID: data.categoryCarTypeID,
               cancelReasonID: 0,
-              paymentStatusID: data.paymentStatusID,
+              paymentStatusId: data.paymentStatusID,
               tripID: Trip_ID,
               tripStatusId: 2,
               tripDrivers: [],
@@ -609,7 +610,7 @@ io.on("connection", (socket) => {
                               .then(async () => {
                                 await TripM.findOne({tripID: trip.tripID}).then(
                                   (savedTr) => {
-                                    console.log(savedTr);
+                                    //console.log(savedTr);
                                     try {
                                       axios({
                                         method: "post",
@@ -621,7 +622,7 @@ io.on("connection", (socket) => {
                                         },
                                       });
                                     } catch (error) {
-                                      console.log("abc");
+                                      //console.log("abc");
                                     }
                                   }
                                 );
@@ -763,7 +764,7 @@ io.on("connection", (socket) => {
                                           tripID: trip.tripID,
                                         }).then((savedTr) => {
                                           try {
-                                            console.log(savedTr);
+                                            //console.log(savedTr);
                                             axios({
                                               method: "post",
                                               url:
@@ -773,7 +774,7 @@ io.on("connection", (socket) => {
                                                 Authorization: `Bearer ${data.token}`,
                                               },
                                             }).then((res) => {
-                                              console.log(res.data);
+                                              //console.log(res.data);
                                             });
                                           } catch (error) {
                                             console.log("abc");
@@ -920,7 +921,7 @@ io.on("connection", (socket) => {
                                                 tripID: trip.tripID,
                                               }).then((savedTr) => {
                                                 try {
-                                                  console.log(savedTr);
+                                                  //console.log(savedTr);
                                                   axios({
                                                     method: "post",
                                                     url:
@@ -930,7 +931,7 @@ io.on("connection", (socket) => {
                                                       Authorization: `Bearer ${data.token}`,
                                                     },
                                                   }).then((res) => {
-                                                    console.log(res.data);
+                                                    //console.log(res.data);
                                                   });
                                                 } catch (error) {
                                                   console.log("abc");
@@ -1022,7 +1023,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("driverRespond", async (data) => {
-    //io.to(users.get(2)).emit('success');
+    console.log("-------------------------------- this is the end");
+    io.to(users.get(2)).emit("success");
     if (data.requestStatus === 1) {
       Pending.findOne({tripID: data.tripID}).then((saved) => {
         let array = saved.drs;
@@ -1043,7 +1045,7 @@ io.on("connection", (socket) => {
                   async (savedDriver) => {
                     try {
                       var trip = savedTrip;
-                      console.log(trip.tripDrivers, "1111111111111");
+                      console.log(savedDriver, "1111111111111");
 
                       trip.tripDrivers.push({
                         driverID: savedDriver.driverID,
@@ -1053,37 +1055,36 @@ io.on("connection", (socket) => {
                         actionDate: savedDriver.updateLocationDate,
                       });
                       trip.tripStatusId = 3;
-                      console.log(trip, "trip");
+                      //console.log(trip, "trip");
+                      console.log("beforeTrip");
                       const data19 = {
                         status:
-                          savedDriver[0].isOnline === true &&
-                          savedDriver[0].isBusy == false
+                          savedDriver.isOnline === true &&
+                          savedDriver.isBusy == false
                             ? 1
-                            : savedDriver[0].isOnline == true &&
-                              savedDriver[0].isBusy == true
+                            : savedDriver.isOnline == true &&
+                              savedDriver.isBusy == true
                             ? 2
-                            : savedDriver[0].isOnline == false
+                            : savedDriver.isOnline == false
                             ? 3
                             : 0,
-                        driverID: savedDriver[0].driverID,
-                        location: savedDriver[0].location,
-                        categoryCarTypeID: savedDriver[0].categoryCarTypeID,
-                        phoneNumber: savedDriver[0].phoneNumber,
-                        idNo: savedDriver[0].idNo,
-                        driverNameAr: savedDriver[0].driverNameAr,
-                        driverNameEn: savedDriver[0].driverNameEn,
-                        modelNameAr: savedDriver[0].modelNameAr,
-                        modelNameEn: savedDriver[0].modelNameEn,
-                        colorNameAr: savedDriver[0].colorNameAr,
-                        colorNameEn: savedDriver[0].colorNameEn,
-                        carImage: savedDriver[0].carImage,
-                        driverImage: savedDriver[0].driverImage,
-                        updateLocationDate: savedDriver[0].updateLocationDate,
-                        trip: savedDriver[0].isBusy
-                          ? savedDriver[0].busyTrip
-                          : "",
+                        driverID: savedDriver.driverID,
+                        location: savedDriver.location,
+                        categoryCarTypeID: savedDriver.categoryCarTypeID,
+                        phoneNumber: savedDriver.phoneNumber,
+                        idNo: savedDriver.idNo,
+                        driverNameAr: savedDriver.driverNameAr,
+                        driverNameEn: savedDriver.driverNameEn,
+                        modelNameAr: savedDriver.modelNameAr,
+                        modelNameEn: savedDriver.modelNameEn,
+                        colorNameAr: savedDriver.colorNameAr,
+                        colorNameEn: savedDriver.colorNameEn,
+                        carImage: savedDriver.carImage,
+                        driverImage: savedDriver.driverImage,
+                        updateLocationDate: savedDriver.updateLocationDate,
+                        trip: savedDriver.isBusy ? savedDriver.busyTrip : "",
                       };
-                      console.log(data19);
+                      console.log("data", data);
                       admins.forEach((admin) => {
                         socket.to(admin).emit("trackAdmin", data19);
                         socket.to(admin).emit("trackCount");
@@ -1097,8 +1098,9 @@ io.on("connection", (socket) => {
                           },
                         }
                       ).then(() => {
+                        console.log("before");
                         TripM.findOne({tripID: trip.tripID}).then((savedTr) => {
-                          console.log(savedTr, "asdfghj");
+                          console.log(savedTr, "after");
                           try {
                             //console.log(savedTr, "----------------", saved1.loginToken);
                             axios({
@@ -1157,7 +1159,10 @@ io.on("connection", (socket) => {
                                 );
                                 io.to(users.get(saved1.userID)).emit(
                                   "success",
-                                  {status: false}
+                                  {
+                                    status: false,
+                                    condition: true,
+                                  }
                                 );
                               }
                             });
@@ -1186,13 +1191,16 @@ io.on("connection", (socket) => {
             idx = i;
           }
         }
-        await Pending.updateOne({tripID: tripID}, {$set: {drs: array}}).then(
-          () => {
-            io.to(users.get(data.driverID)).emit("success", {
-              status: true,
-              condition: false,
-            });
-            Pending.findOne({tripID: tripID}).then(async (updatedPending) => {
+        await Pending.updateOne(
+          {tripID: data.tripID},
+          {$set: {drs: array}}
+        ).then(() => {
+          io.to(users.get(data.driverID)).emit("success", {
+            status: true,
+            condition: false,
+          });
+          Pending.findOne({tripID: data.tripID}).then(
+            async (updatedPending) => {
               var idx2 = -1;
               let array2 = pendingTrip.drs;
               for (let j = 0; j < array2; j++) {
@@ -1222,30 +1230,32 @@ io.on("connection", (socket) => {
                       {tripID: data.tripID},
                       {$set: {tripDrivers: array3, tripStatusId: 2}}
                     ).then(() => {
-                      try {
-                        axios({
-                          method: "post",
-                          url:
-                            "https://devmachine.taketosa.com/api/Trip/NewTrip",
-                          data: savedTr,
-                          headers: {
-                            Authorization: `Bearer ${data.token}`,
-                          },
-                        }).then((res) => {
-                          admin.messaging().sendToDevice(
-                            pendingTrip2.registrationToken,
-                            {
-                              data: {
-                                message:
-                                  "there is no drivers available right now",
-                              },
+                      TripM.findOne({tripID: data.tripID}).then((savedTr) => {
+                        try {
+                          axios({
+                            method: "post",
+                            url:
+                              "https://devmachine.taketosa.com/api/Trip/NewTrip",
+                            data: savedTr,
+                            headers: {
+                              Authorization: `Bearer ${pendingTrip2.loginToken}`,
                             },
-                            notification_options
-                          );
-                        });
-                      } catch (error) {
-                        console.log("dada");
-                      }
+                          }).then((res) => {
+                            admin.messaging().sendToDevice(
+                              pendingTrip2.registrationToken,
+                              {
+                                data: {
+                                  message:
+                                    "there is no drivers available right now",
+                                },
+                              },
+                              notification_options
+                            );
+                          });
+                        } catch (error) {
+                          console.log("dada");
+                        }
+                      });
                     });
                   }
                 );
@@ -1573,16 +1583,15 @@ io.on("connection", (socket) => {
                   }
                 );
               }
-            });
-          }
-        );
+            }
+          );
+        });
       });
     }
   });
 
   socket.on("arrive", (data) => {
     Pending.findOne({tripID: data.tripID}).then((trip) => {
-      Pending.updateOne({tripID: data.tripID}, {$set: {arriveStatus: 1}});
       socket.to(users.get(trip.userID)).emit("arrive");
     });
   });
