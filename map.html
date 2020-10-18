@@ -12,32 +12,20 @@
         <script>
         var socket = io.connect('http://localhost:5000');
         const data = {
-            registrationToken: "123123",
-            userId: 0,
-            pickupLat: 30.064263134225862,
-            pickupLng: 31.2575034019341,
-            pickAddress: "abc",
-            dropoffLat: 30.044367093804823,
-            dropoffLng: 31.235717982314123,
-            dropoffAddress: "qwe",
-            promoCode: 8889584283,
-            categoryCarTypeID: 1,
-            cancelReasonID: 2,
-            paymentStatusID: 1,
-            token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiRHJpdjcxNzY3Nzg4MzkiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9zaWQiOiI1IiwianRpIjoiZWU3OGRiMmEtNTlkYS00YWQ1LWEwMmQtYWRkNjg0ZTAzMzM3IiwiZXhwIjoxNjAxODA3MTkzLCJpc3MiOiJodHRwczovL2Rldm1hY2hpbmUudGFrZXRvc2EuY29tIiwiYXVkIjoiaHR0cHM6Ly9kZXZtYWNoaW5lLnRha2V0b3NhLmNvbSJ9.o6tEeKbQnhywpOu8H-fas-prxb7s-Bsf3fVGyjTBYL8",
-            maxDistance: 790.1836707231585,
-            paymentStatusID:1,
-            Language:'ar',
-            Lat:30.767,
-            Lang:30.897,
-            tripMasterID:9,trip:22
-
+           
+            Lat:30.0903083,
+            Lang: 31.6112002,
+           token:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiUGFzczE1MzMyMzU4OTIiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9zaWQiOiIxMTAxIiwianRpIjoiMTNhNzQ2NmYtZjY2Mi00MzUwLTkyNjktY2Q1YzBhMmRhYmE1IiwiZXhwIjoxNjAzMDU2NTMzLCJpc3MiOiJodHRwczovL2Rldm1hY2hpbmUudGFrZXRvc2EuY29tIiwiYXVkIjoiaHR0cHM6Ly9kZXZtYWNoaW5lLnRha2V0b3NhLmNvbSJ9.y43alFFjBE6zexwhqNTaFswJ5i3z_Z-wzuFx-B0TVvk",
+Language:"en",
+tripMasterID:21,
+trip:22,
+cancelReasonID:2
 
         }
-        socket.emit("join",0)
+        socket.emit("join",1)
         
         socket.emit("CancelOnWay",data)
-       
+       socket.on("getavailable",data=>console.log(data))
     </script>
     </body>
 </html>
